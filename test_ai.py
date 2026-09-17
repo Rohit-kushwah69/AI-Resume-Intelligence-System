@@ -1,5 +1,12 @@
-from app.services.ai_analyzer import analyze_resume_with_ai
+from app.services.ai_analyzer import (
+    analyze_resume_with_ai,
+    analyze_resume_intelligence
+)
 
+
+# --------------------------------------------------
+# Sample Resume Text
+# --------------------------------------------------
 
 resume_text = """
 Rohit Singh
@@ -40,6 +47,23 @@ RAG, LangChain, Gemini and ChromaDB.
 """
 
 
-result = analyze_resume_with_ai(resume_text)
+# --------------------------------------------------
+# Test 1: Resume Parsing
+# --------------------------------------------------
 
-print(result)
+print("\n========== RESUME PARSING ==========\n")
+
+parsed_data = analyze_resume_with_ai(resume_text)
+
+print(parsed_data)
+
+
+# --------------------------------------------------
+# Test 2: Resume Intelligence Analysis
+# --------------------------------------------------
+
+print("\n========== RESUME INTELLIGENCE ==========\n")
+
+analysis = analyze_resume_intelligence(resume_text)
+
+print(analysis)
