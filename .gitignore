@@ -1,0 +1,6 @@
+.env
+venv/
+__pycache__/
+*.pyc
+ai_resume.db
+app/uploads/
