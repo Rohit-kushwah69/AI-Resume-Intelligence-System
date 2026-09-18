@@ -62,4 +62,4 @@ def calculate_job_match(
         "total_required_skills": total_required,
         "matched_count": len(matched_skills),
         "missing_count": len(missing_skills)
-    }
+    } 

@@ -512,3 +512,4 @@ def parse_resume(text: str):
         "projects": extract_projects(text)
     }
 
+ 

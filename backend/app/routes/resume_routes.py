@@ -13,7 +13,7 @@ from ..services.ai_analyzer import (
     analyze_resume_with_ai,
     analyze_resume_intelligence
 )
-
+ 
 
 router = APIRouter(
     prefix="/api/resumes",
