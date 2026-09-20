@@ -20,7 +20,7 @@ from ..services.ai_analyzer import analyze_job_match_with_ai
 # ==========================================
 
 router = APIRouter(
-    prefix="/jobs",
+    prefix="/api/jobs",
     tags=["Jobs"]
 )
 
