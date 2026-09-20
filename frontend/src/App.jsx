@@ -13,6 +13,7 @@ import Candidates from "./pages/candidates/Candidates";
 import CandidateDetails from "./pages/candidates/CandidateDetails";
 import MatchResults from "./pages/matching/MatchResults";
 import MatchDetails from "./pages/matching/MatchDetails";
+import MatchHistory from "./pages/matching/MatchHistory";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -36,6 +37,8 @@ function App() {
 
           <Route path="matching" element={<MatchResults />} />
           <Route path="matching/:jobId/:resumeId" element={<MatchDetails />} />
+          <Route path="matching/history" element={<MatchHistory />}
+/>
 
           <Route path="*" element={<NotFound />} />
         </Route>

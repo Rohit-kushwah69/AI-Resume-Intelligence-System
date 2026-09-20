@@ -1,12 +1,15 @@
 import { NavLink } from "react-router-dom";
+
 import {
   LayoutDashboard,
   FileText,
+  Upload,
   Briefcase,
   Users,
-  Target,
+  GitCompare,
   Settings,
-  Upload,
+  History,
+  Target,
 } from "lucide-react";
 
 const menuItems = [
@@ -40,6 +43,11 @@ const menuItems = [
     path: "/matching",
     icon: Target,
   },
+  {
+    name: "Match History",
+    path: "/matching/history",
+    icon: History,
+  },
 ];
 
 function Sidebar() {
@@ -56,6 +64,7 @@ function Sidebar() {
           <h1 className="text-lg font-bold text-slate-800">
             Resume AI
           </h1>
+
           <p className="text-xs text-slate-500">
             Intelligence System
           </p>
