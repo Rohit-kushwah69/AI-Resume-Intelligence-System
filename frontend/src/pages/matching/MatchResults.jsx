@@ -8,11 +8,12 @@ import {
   RefreshCw,
   ArrowRight,
   Sparkles,
+  Save,
 } from "lucide-react";
 
 import { getJobs } from "../../services/jobApi";
 import { getResumes } from "../../services/resumeApi";
-import { matchResumeWithJob } from "../../services/matchApi";
+import { matchResumeWithJob, saveJobMatch } from "../../services/matchApi";
 
 function MatchResults() {
   const [jobs, setJobs] = useState([]);
@@ -30,6 +31,9 @@ function MatchResults() {
   const [matchError, setMatchError] = useState("");
 
   const [result, setResult] = useState(null);
+
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   const fetchData = async () => {
     try {
@@ -50,7 +54,7 @@ function MatchResults() {
 
       setError(
         err.response?.data?.detail ||
-          "Failed to load jobs and candidates."
+        "Failed to load jobs and candidates."
       );
     } finally {
       setLoading(false);
@@ -85,10 +89,37 @@ function MatchResults() {
 
       setMatchError(
         err.response?.data?.detail ||
-          "Failed to match candidate with job."
+        "Failed to match candidate with job."
       );
     } finally {
       setMatching(false);
+    }
+  };
+
+  const handleSaveMatch = async () => {
+    if (!result) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setSaveMessage("");
+
+      await saveJobMatch(
+        result.job_id,
+        result.resume_id
+      );
+
+      setSaveMessage("Match saved successfully!");
+    } catch (err) {
+      console.error("Save match error:", err);
+
+      setSaveMessage(
+        err.response?.data?.detail ||
+        "Failed to save match."
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -403,19 +434,51 @@ function MatchResults() {
 
               <div className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-600">
                 {typeof result.ai_analysis ===
-                "string"
+                  "string"
                   ? result.ai_analysis
                   : JSON.stringify(
-                      result.ai_analysis,
-                      null,
-                      2
-                    )}
+                    result.ai_analysis,
+                    null,
+                    2
+                  )}
               </div>
             </div>
           )}
 
           {/* Details Button */}
-          <div className="flex justify-end">
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:justify-end">
+            {saveMessage && (
+              <p
+                className={`text-sm font-medium ${saveMessage.includes("successfully")
+                    ? "text-green-600"
+                    : "text-red-600"
+                  }`}
+              >
+                {saveMessage}
+              </p>
+            )}
+
+            <button
+              onClick={handleSaveMatch}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw
+                    size={17}
+                    className="animate-spin"
+                  />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={17} />
+                  Save Match
+                </>
+              )}
+            </button>
+
             <Link
               to={`/matching/${result.job_id}/${result.resume_id}`}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-900"
@@ -465,6 +528,45 @@ function ScoreCard({ title, score }) {
 function SkillCard({ title, skills, type }) {
   const list = Array.isArray(skills) ? skills : [];
 
+  const renderSkill = (skill) => {
+    if (skill === null || skill === undefined) {
+      return "";
+    }
+
+    if (
+      typeof skill === "string" ||
+      typeof skill === "number" ||
+      typeof skill === "boolean"
+    ) {
+      return String(skill);
+    }
+
+    if (typeof skill === "object") {
+      // Common structured skill formats
+      if (skill.name) {
+        return String(skill.name);
+      }
+
+      if (skill.skill) {
+        return String(skill.skill);
+      }
+
+      if (skill.title) {
+        return String(skill.title);
+      }
+
+      return Object.values(skill)
+        .filter(
+          (value) =>
+            typeof value === "string" ||
+            typeof value === "number"
+        )
+        .join(" • ");
+    }
+
+    return "";
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-bold text-slate-800">
@@ -473,18 +575,25 @@ function SkillCard({ title, skills, type }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {list.length > 0 ? (
-          list.map((skill, index) => (
-            <span
-              key={`${skill}-${index}`}
-              className={`rounded-lg px-3 py-2 text-xs font-medium ${
-                type === "matched"
+          list.map((skill, index) => {
+            const skillText = renderSkill(skill);
+
+            if (!skillText) {
+              return null;
+            }
+
+            return (
+              <span
+                key={`${skillText}-${index}`}
+                className={`rounded-lg px-3 py-2 text-xs font-medium ${type === "matched"
                   ? "bg-green-50 text-green-700"
                   : "bg-red-50 text-red-700"
-              }`}
-            >
-              {skill}
-            </span>
-          ))
+                  }`}
+              >
+                {skillText}
+              </span>
+            );
+          })
         ) : (
           <p className="text-sm text-slate-400">
             No skills available.

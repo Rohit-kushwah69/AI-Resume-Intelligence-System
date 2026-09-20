@@ -15,26 +15,32 @@ import RecentJobs from "../components/dashboard/RecentJobs";
 import MatchOverview from "../components/dashboard/MatchOverview";
 
 import { getResumes } from "../services/resumeApi";
-import { getJobs } from "../services/jobApi";
+import {
+  getJobs,
+  getMatchCount,
+} from "../services/jobApi";
 
 function Dashboard() {
   const navigate = useNavigate();
 
   const [resumes, setResumes] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [matchCount, setMatchCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [resumeData, jobData] = await Promise.all([
+        const [resumeData, jobData, matchData] = await Promise.all([
           getResumes(),
           getJobs(),
+          getMatchCount(),
         ]);
 
         setResumes(resumeData || []);
         setJobs(jobData || []);
+        setMatchCount(matchData?.total_matches || 0);
       } catch (error) {
         console.error("Dashboard data error:", error);
       } finally {
@@ -101,8 +107,8 @@ function Dashboard() {
 
         <StatCard
           title="Matches"
-          value="--"
-          change="Coming Soon"
+          value={loading ? "..." : matchCount}
+          change="Live Data"
           icon={Target}
         />
 

@@ -17,3 +17,9 @@ export const createJob = async (jobData) => {
   const response = await API.post("/jobs/", jobData);
   return response.data;
 };
+
+// Count 
+export const getMatchCount = async () => {
+  const response = await API.get("/jobs/match/count");
+  return response.data;
+};

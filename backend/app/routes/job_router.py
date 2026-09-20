@@ -122,6 +122,20 @@ def get_jobs(
 
     return result
 
+# ==========================================
+# GET TOTAL MATCH COUNT
+# ==========================================
+
+@router.get("/match/count")
+def get_match_count(
+    db: Session = Depends(get_db)
+):
+    total_matches = db.query(JobMatch).count()
+
+    return {
+        "total_matches": total_matches
+    }
+
 
 # ==========================================
 # GET MATCH HISTORY

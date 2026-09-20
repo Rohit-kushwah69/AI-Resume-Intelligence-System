@@ -14,6 +14,7 @@ import CandidateDetails from "./pages/candidates/CandidateDetails";
 import MatchResults from "./pages/matching/MatchResults";
 import MatchDetails from "./pages/matching/MatchDetails";
 import MatchHistory from "./pages/matching/MatchHistory";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -39,7 +40,7 @@ function App() {
           <Route path="matching/:jobId/:resumeId" element={<MatchDetails />} />
           <Route path="matching/history" element={<MatchHistory />}
 />
-
+          <Route path="settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

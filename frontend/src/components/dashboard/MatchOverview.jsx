@@ -24,6 +24,7 @@ function MatchOverview() {
   useEffect(() => {
     const loadMatchOverview = async () => {
       try {
+        // Get all resumes
         const resumes = await getResumes();
 
         if (!resumes || resumes.length === 0) {
@@ -31,10 +32,14 @@ function MatchOverview() {
           return;
         }
 
+        // Get match history for every resume
         const historyResults = await Promise.all(
           resumes.map(async (resume) => {
             try {
-              return await getMatchHistory(resume.id);
+              const response = await getMatchHistory(resume.id);
+
+              // Backend response contains history array
+              return response?.history || [];
             } catch (error) {
               console.error(
                 `Match history error for resume ${resume.id}:`,
@@ -46,42 +51,55 @@ function MatchOverview() {
           })
         );
 
+        // Combine all resume histories
         const allMatches = historyResults.flat();
 
+        // No saved matches
         if (allMatches.length === 0) {
           setLoading(false);
           return;
         }
 
+        // Calculate Exact Skill average
         const exactTotal = allMatches.reduce(
-          (sum, match) => sum + (match.exact_skill_score || 0),
+          (sum, match) => sum + Number(match.exact_skill_score || 0),
           0
         );
 
+        // Calculate Semantic Skill average
         const semanticTotal = allMatches.reduce(
-          (sum, match) => sum + (match.semantic_skill_score || 0),
+          (sum, match) =>
+            sum + Number(match.semantic_skill_score || 0),
           0
         );
 
+        // Calculate Experience average
         const experienceTotal = allMatches.reduce(
-          (sum, match) => sum + (match.experience_score || 0),
+          (sum, match) =>
+            sum + Number(match.experience_score || 0),
           0
         );
 
         const count = allMatches.length;
 
+        const exactAverage = Math.round(exactTotal / count);
+        const semanticAverage = Math.round(semanticTotal / count);
+        const experienceAverage = Math.round(
+          experienceTotal / count
+        );
+
         setMatchData([
           {
             label: "Exact Skill Match",
-            value: Math.round(exactTotal / count),
+            value: exactAverage,
           },
           {
             label: "Semantic Match",
-            value: Math.round(semanticTotal / count),
+            value: semanticAverage,
           },
           {
             label: "Experience Match",
-            value: Math.round(experienceTotal / count),
+            value: experienceAverage,
           },
         ]);
       } catch (error) {
@@ -118,6 +136,7 @@ function MatchOverview() {
           {matchData.map((item) => (
             <div key={item.label}>
               
+              {/* Label + Percentage */}
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-600">
                   {item.label}
@@ -128,6 +147,7 @@ function MatchOverview() {
                 </span>
               </div>
 
+              {/* Progress Bar */}
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-full rounded-full bg-indigo-600 transition-all duration-500"
@@ -140,7 +160,6 @@ function MatchOverview() {
           ))}
         </div>
       )}
-
     </div>
   );
 }
