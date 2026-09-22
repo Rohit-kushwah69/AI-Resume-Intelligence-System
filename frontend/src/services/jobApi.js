@@ -23,3 +23,9 @@ export const getMatchCount = async () => {
   const response = await API.get("/jobs/match/count");
   return response.data;
 };
+
+// delete
+export const deleteJob = async (id) => {
+  const response = await API.delete(`/jobs/${id}`);
+  return response.data;
+};

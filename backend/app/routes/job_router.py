@@ -527,6 +527,23 @@ def save_job_match(
 ):
 
     # --------------------------------------
+    # Check Duplicate Match
+    # --------------------------------------
+
+    existing_match = db.query(JobMatch).filter(
+        JobMatch.job_id == job_id,
+        JobMatch.resume_id == resume_id
+    ).first()
+
+    if existing_match:
+
+        raise HTTPException(
+            status_code=400,
+            detail="This job match is already saved in history"
+        )
+    
+
+    # --------------------------------------
     # Find Job
     # --------------------------------------
 
@@ -804,4 +821,42 @@ def get_job(
         "experience_required": (
             job.experience_required
         )
+    }
+
+# ==========================================
+# DELETE JOB
+# ==========================================
+
+@router.delete("/{job_id}")
+def delete_job(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+
+    # Find Job
+    job = db.query(Job).filter(
+        Job.id == job_id
+    ).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    # Delete related match history
+    db.query(JobMatch).filter(
+        JobMatch.job_id == job_id
+    ).delete(
+        synchronize_session=False
+    )
+
+    # Delete Job
+    db.delete(job)
+
+    db.commit()
+
+    return {
+        "message": "Job deleted successfully",
+        "job_id": job_id
     }

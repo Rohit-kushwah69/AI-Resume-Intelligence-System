@@ -22,3 +22,8 @@ export const getResumeById = async (id) => {
   const response = await API.get(`/resumes/${id}`);
   return response.data;
 };
+
+export const deleteResume = async (id) => {
+  const response = await API.delete(`/resumes/${id}`);
+  return response.data;
+};

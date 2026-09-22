@@ -6,7 +6,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database.database import get_db
-from ..database.models import Resume
+from ..database.models import Resume, JobMatch
 from ..services.pdf_parser import extract_text_from_pdf
 from ..services.resume_parser import parse_resume
 from ..services.ai_analyzer import (
@@ -418,4 +418,42 @@ def get_resume(
         "file_path": resume.file_path,
 
         "created_at": resume.created_at
+    }
+
+# ==========================================
+# DELETE RESUME
+# ==========================================
+
+@router.delete("/{resume_id}")
+def delete_resume(
+    resume_id: int,
+    db: Session = Depends(get_db)
+):
+
+    # Find Resume
+    resume = db.query(Resume).filter(
+        Resume.id == resume_id
+    ).first()
+
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+
+    # Delete related job matches
+    db.query(JobMatch).filter(
+        JobMatch.resume_id == resume_id
+    ).delete(
+        synchronize_session=False
+    )
+
+    # Delete Resume
+    db.delete(resume)
+
+    db.commit()
+
+    return {
+        "message": "Resume deleted successfully",
+        "resume_id": resume_id
     }
