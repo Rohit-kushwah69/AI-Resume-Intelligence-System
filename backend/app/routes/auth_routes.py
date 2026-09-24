@@ -13,7 +13,8 @@ from ..schemas.auth_schema import (
 from ..utils.security import (
     hash_password,
     verify_password,
-    create_access_token
+    create_access_token,
+    get_current_admin
 )
 
 
@@ -114,4 +115,18 @@ def login_admin(
     return {
         "access_token": access_token,
         "token_type": "bearer"
+    }
+
+# =========================
+# CURRENT ADMIN
+# =========================
+
+@router.get("/me")
+def get_me(
+    current_admin: dict = Depends(get_current_admin)
+):
+
+    return {
+        "message": "Authentication successful",
+        "admin": current_admin
     }
