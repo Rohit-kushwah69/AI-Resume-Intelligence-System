@@ -6,6 +6,7 @@ from .database import models
 
 from .routes.resume_routes import router as resume_router
 from .routes.job_router import router as job_router
+from .routes.auth_routes import router as auth_router
 
 
 # Create database tables
@@ -26,6 +27,7 @@ origins = [
     "http://127.0.0.1:3000",
 ]
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -38,6 +40,7 @@ app.add_middleware(
 # Include routers
 app.include_router(resume_router)
 app.include_router(job_router)
+app.include_router(auth_router)
 
 
 @app.get("/")
