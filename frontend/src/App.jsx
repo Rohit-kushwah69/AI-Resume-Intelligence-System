@@ -17,10 +17,13 @@ import MatchHistory from "./pages/matching/MatchHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+import Login from "./pages/auth/Login";
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
 
@@ -39,7 +42,7 @@ function App() {
           <Route path="matching" element={<MatchResults />} />
           <Route path="matching/:jobId/:resumeId" element={<MatchDetails />} />
           <Route path="matching/history" element={<MatchHistory />}
-/>
+          />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Route>
