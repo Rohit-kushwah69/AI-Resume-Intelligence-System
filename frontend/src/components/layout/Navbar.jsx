@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -13,14 +13,20 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-import {
-  getCurrentAdmin,
-  logoutAdmin,
-} from "../../services/authApi";
-
+import { useAuth } from "../../context/AuthContext";
 
 function Navbar() {
   const navigate = useNavigate();
+
+  // ==========================================
+  // AUTH
+  // ==========================================
+
+  const { admin, logout } = useAuth();
+
+  // ==========================================
+  // STATES
+  // ==========================================
 
   const [search, setSearch] = useState("");
 
@@ -29,42 +35,6 @@ function Navbar() {
 
   const [showProfile, setShowProfile] =
     useState(false);
-
-  const [admin, setAdmin] = useState(null);
-
-  const [profileLoading, setProfileLoading] =
-    useState(true);
-
-
-  // ==========================================
-  // FETCH CURRENT ADMIN
-  // ==========================================
-
-  useEffect(() => {
-    const fetchAdmin = async () => {
-      try {
-        const data = await getCurrentAdmin();
-
-        setAdmin(data.admin);
-
-        localStorage.setItem(
-          "admin",
-          JSON.stringify(data.admin)
-        );
-
-      } catch (error) {
-        console.error(
-          "Failed to fetch admin profile:",
-          error
-        );
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    fetchAdmin();
-  }, []);
-
 
   // ==========================================
   // SEARCH
@@ -82,7 +52,6 @@ function Navbar() {
     );
   };
 
-
   // ==========================================
   // CLEAR SEARCH
   // ==========================================
@@ -90,7 +59,6 @@ function Navbar() {
   const handleClearSearch = () => {
     setSearch("");
   };
-
 
   // ==========================================
   // LOGOUT
@@ -103,13 +71,12 @@ function Navbar() {
 
     if (!confirmed) return;
 
-    logoutAdmin();
+    logout();
 
     navigate("/login", {
       replace: true,
     });
   };
-
 
   // ==========================================
   // TOGGLE NOTIFICATIONS
@@ -123,7 +90,6 @@ function Navbar() {
     setShowProfile(false);
   };
 
-
   // ==========================================
   // TOGGLE PROFILE
   // ==========================================
@@ -135,7 +101,6 @@ function Navbar() {
 
     setShowNotifications(false);
   };
-
 
   return (
     <header className="sticky top-0 z-40 flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 shadow-sm backdrop-blur-md sm:px-6">
@@ -181,7 +146,6 @@ function Navbar() {
 
       </div>
 
-
       {/* ======================================
           RIGHT SECTION
       ====================================== */}
@@ -215,7 +179,6 @@ function Navbar() {
 
           </button>
 
-
           {/* Notification Dropdown */}
 
           {showNotifications && (
@@ -242,7 +205,6 @@ function Navbar() {
 
               </div>
 
-
               <div className="px-5 py-8 text-center">
 
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
@@ -264,7 +226,6 @@ function Navbar() {
 
               </div>
 
-
               <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3 text-center">
 
                 <span className="text-xs font-medium text-slate-400">
@@ -279,11 +240,9 @@ function Navbar() {
 
         </div>
 
-
         {/* Divider */}
 
         <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-
 
         {/* ====================================
             PROFILE
@@ -308,27 +267,19 @@ function Navbar() {
 
             </div>
 
-
             {/* User Info */}
 
             <div className="hidden text-left lg:block">
 
               <p className="text-sm font-semibold leading-5 text-slate-700">
-
-                {profileLoading
-                  ? "Loading..."
-                  : admin?.name || "Admin"}
-
+                {admin?.name || "Admin"}
               </p>
 
               <p className="max-w-[150px] truncate text-[11px] font-medium text-slate-400">
-
                 {admin?.email || "Administrator"}
-
               </p>
 
             </div>
-
 
             <ChevronDown
               size={16}
@@ -341,8 +292,9 @@ function Navbar() {
 
           </button>
 
-
-          {/* Profile Dropdown */}
+          {/* ==================================
+              PROFILE DROPDOWN
+          ================================== */}
 
           {showProfile && (
 
@@ -360,19 +312,14 @@ function Navbar() {
 
                   </div>
 
-
                   <div className="min-w-0">
 
                     <p className="truncate text-sm font-bold text-slate-800">
-
                       {admin?.name || "Admin"}
-
                     </p>
 
                     <p className="truncate text-xs text-slate-400">
-
                       {admin?.email || "Administrator"}
-
                     </p>
 
                   </div>
@@ -380,7 +327,6 @@ function Navbar() {
                 </div>
 
               </div>
-
 
               {/* Menu */}
 
@@ -406,7 +352,6 @@ function Navbar() {
 
                 </button>
 
-
                 {/* Settings */}
 
                 <Link
@@ -428,7 +373,6 @@ function Navbar() {
                 </Link>
 
               </div>
-
 
               {/* Logout */}
 
