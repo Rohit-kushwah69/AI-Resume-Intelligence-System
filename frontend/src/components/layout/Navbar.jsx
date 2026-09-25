@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   Bell,
   Search,
@@ -12,14 +13,58 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+import {
+  getCurrentAdmin,
+  logoutAdmin,
+} from "../../services/authApi";
+
+
 function Navbar() {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
+
   const [showNotifications, setShowNotifications] =
     useState(false);
+
   const [showProfile, setShowProfile] =
     useState(false);
+
+  const [admin, setAdmin] = useState(null);
+
+  const [profileLoading, setProfileLoading] =
+    useState(true);
+
+
+  // ==========================================
+  // FETCH CURRENT ADMIN
+  // ==========================================
+
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      try {
+        const data = await getCurrentAdmin();
+
+        setAdmin(data.admin);
+
+        localStorage.setItem(
+          "admin",
+          JSON.stringify(data.admin)
+        );
+
+      } catch (error) {
+        console.error(
+          "Failed to fetch admin profile:",
+          error
+        );
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchAdmin();
+  }, []);
+
 
   // ==========================================
   // SEARCH
@@ -37,6 +82,7 @@ function Navbar() {
     );
   };
 
+
   // ==========================================
   // CLEAR SEARCH
   // ==========================================
@@ -44,6 +90,7 @@ function Navbar() {
   const handleClearSearch = () => {
     setSearch("");
   };
+
 
   // ==========================================
   // LOGOUT
@@ -56,10 +103,13 @@ function Navbar() {
 
     if (!confirmed) return;
 
-    localStorage.removeItem("token");
+    logoutAdmin();
 
-    navigate("/");
+    navigate("/login", {
+      replace: true,
+    });
   };
+
 
   // ==========================================
   // TOGGLE NOTIFICATIONS
@@ -73,6 +123,7 @@ function Navbar() {
     setShowProfile(false);
   };
 
+
   // ==========================================
   // TOGGLE PROFILE
   // ==========================================
@@ -84,6 +135,7 @@ function Navbar() {
 
     setShowNotifications(false);
   };
+
 
   return (
     <header className="sticky top-0 z-40 flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 shadow-sm backdrop-blur-md sm:px-6">
@@ -129,6 +181,7 @@ function Navbar() {
 
       </div>
 
+
       {/* ======================================
           RIGHT SECTION
       ====================================== */}
@@ -152,26 +205,27 @@ function Navbar() {
               strokeWidth={1.9}
             />
 
-            {/* Notification Badge */}
-
             <span className="absolute right-2 top-1.5 flex h-2 w-2">
+
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
 
               <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+
             </span>
 
           </button>
 
+
           {/* Notification Dropdown */}
 
           {showNotifications && (
-            <div className="absolute right-0 top-12 z-50 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/60">
 
-              {/* Header */}
+            <div className="absolute right-0 top-12 z-50 w-[320px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/60">
 
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
 
                 <div>
+
                   <h3 className="text-sm font-bold text-slate-800">
                     Notifications
                   </h3>
@@ -179,6 +233,7 @@ function Navbar() {
                   <p className="mt-0.5 text-xs text-slate-400">
                     Stay updated with your activity
                   </p>
+
                 </div>
 
                 <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600">
@@ -187,15 +242,16 @@ function Navbar() {
 
               </div>
 
-              {/* Notification Content */}
 
               <div className="px-5 py-8 text-center">
 
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-50">
+
                   <CheckCircle2
                     size={24}
                     className="text-slate-300"
                   />
+
                 </div>
 
                 <p className="mt-3 text-sm font-semibold text-slate-600">
@@ -208,22 +264,26 @@ function Navbar() {
 
               </div>
 
-              {/* Footer */}
 
               <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3 text-center">
+
                 <span className="text-xs font-medium text-slate-400">
                   AI Resume Intelligence System
                 </span>
+
               </div>
 
             </div>
+
           )}
 
         </div>
 
+
         {/* Divider */}
 
         <div className="hidden h-8 w-px bg-slate-200 sm:block" />
+
 
         {/* ====================================
             PROFILE
@@ -240,25 +300,35 @@ function Navbar() {
             {/* Avatar */}
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+
               <UserCircle
                 size={25}
                 strokeWidth={1.8}
               />
+
             </div>
+
 
             {/* User Info */}
 
             <div className="hidden text-left lg:block">
 
               <p className="text-sm font-semibold leading-5 text-slate-700">
-                Admin
+
+                {profileLoading
+                  ? "Loading..."
+                  : admin?.name || "Admin"}
+
               </p>
 
-              <p className="text-[11px] font-medium text-slate-400">
-                Resume Manager
+              <p className="max-w-[150px] truncate text-[11px] font-medium text-slate-400">
+
+                {admin?.email || "Administrator"}
+
               </p>
 
             </div>
+
 
             <ChevronDown
               size={16}
@@ -271,9 +341,11 @@ function Navbar() {
 
           </button>
 
+
           {/* Profile Dropdown */}
 
           {showProfile && (
+
             <div className="absolute right-0 top-14 z-50 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/60">
 
               {/* Profile Header */}
@@ -283,17 +355,24 @@ function Navbar() {
                 <div className="flex items-center gap-3">
 
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+
                     <UserCircle size={27} />
+
                   </div>
+
 
                   <div className="min-w-0">
 
                     <p className="truncate text-sm font-bold text-slate-800">
-                      Admin
+
+                      {admin?.name || "Admin"}
+
                     </p>
 
                     <p className="truncate text-xs text-slate-400">
-                      Resume Manager
+
+                      {admin?.email || "Administrator"}
+
                     </p>
 
                   </div>
@@ -301,6 +380,7 @@ function Navbar() {
                 </div>
 
               </div>
+
 
               {/* Menu */}
 
@@ -317,12 +397,15 @@ function Navbar() {
                 >
 
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+
                     <User size={16} />
+
                   </span>
 
                   <span>Profile</span>
 
                 </button>
+
 
                 {/* Settings */}
 
@@ -335,7 +418,9 @@ function Navbar() {
                 >
 
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+
                     <Settings size={16} />
+
                   </span>
 
                   <span>Settings</span>
@@ -343,6 +428,7 @@ function Navbar() {
                 </Link>
 
               </div>
+
 
               {/* Logout */}
 
@@ -355,7 +441,9 @@ function Navbar() {
                 >
 
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50">
+
                     <LogOut size={16} />
+
                   </span>
 
                   <span>Logout</span>
@@ -365,6 +453,7 @@ function Navbar() {
               </div>
 
             </div>
+
           )}
 
         </div>
