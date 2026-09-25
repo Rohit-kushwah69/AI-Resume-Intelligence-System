@@ -34,6 +34,7 @@ function Login() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // ==========================================
   // LOGIN
@@ -44,9 +45,22 @@ function Login() {
 
     setError("");
 
-    // Validation
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter email and password.");
+    const normalizedEmail = email.trim().toLowerCase();
+    const nextFieldErrors = {};
+
+    if (!normalizedEmail) {
+      nextFieldErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      nextFieldErrors.email = "Please enter a valid email address.";
+    }
+
+    if (!password) {
+      nextFieldErrors.password = "Password is required.";
+    }
+
+    setFieldErrors(nextFieldErrors);
+
+    if (Object.keys(nextFieldErrors).length > 0) {
       return;
     }
 
@@ -58,9 +72,13 @@ function Login() {
       // ======================================
 
       const data = await loginAdmin(
-        email.trim(),
+        normalizedEmail,
         password
       );
+
+      if (!data?.access_token) {
+        throw new Error("Login succeeded but no authentication token was returned.");
+      }
 
       // ======================================
       // SAVE TOKEN + LOAD ADMIN
@@ -84,6 +102,7 @@ function Login() {
 
       setError(
         error.response?.data?.detail ||
+          error.message ||
           "Invalid email or password."
       );
 
@@ -209,7 +228,11 @@ function Login() {
 
             {error && (
 
-              <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600"
+              >
 
                 <AlertCircle
                   size={18}
@@ -226,6 +249,7 @@ function Login() {
 
             <form
               onSubmit={handleLogin}
+              noValidate
               className="space-y-5"
             >
 
@@ -248,15 +272,34 @@ function Login() {
                     type="email"
                     placeholder="admin@gmail.com"
                     value={email}
-                    onChange={(e) =>
-                      setEmail(e.target.value)
-                    }
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((previous) => ({
+                          ...previous,
+                          email: "",
+                        }));
+                      }
+                      if (error) setError("");
+                    }}
                     disabled={loading}
+                    required
+                    aria-invalid={Boolean(fieldErrors.email)}
+                    aria-describedby={fieldErrors.email ? "login-email-error" : undefined}
                     autoComplete="email"
                     className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                 </div>
+
+                {fieldErrors.email && (
+                  <p
+                    id="login-email-error"
+                    className="mt-2 text-xs font-medium text-red-600"
+                  >
+                    {fieldErrors.email}
+                  </p>
+                )}
 
               </div>
 
@@ -283,10 +326,20 @@ function Login() {
                     }
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) =>
-                      setPassword(e.target.value)
-                    }
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) {
+                        setFieldErrors((previous) => ({
+                          ...previous,
+                          password: "",
+                        }));
+                      }
+                      if (error) setError("");
+                    }}
                     disabled={loading}
+                    required
+                    aria-invalid={Boolean(fieldErrors.password)}
+                    aria-describedby={fieldErrors.password ? "login-password-error" : undefined}
                     autoComplete="current-password"
                     className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
@@ -299,6 +352,12 @@ function Login() {
                       )
                     }
                     disabled={loading}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    title={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed"
                   >
 
@@ -312,6 +371,15 @@ function Login() {
 
                 </div>
 
+                {fieldErrors.password && (
+                  <p
+                    id="login-password-error"
+                    className="mt-2 text-xs font-medium text-red-600"
+                  >
+                    {fieldErrors.password}
+                  </p>
+                )}
+
               </div>
 
               {/* Login Button */}
@@ -319,6 +387,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
+                aria-busy={loading}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
 

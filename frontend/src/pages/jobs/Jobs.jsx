@@ -10,6 +10,9 @@ import {
   Building2,
   Eye,
   Trash2,
+  Users,
+  BarChart3,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import {
@@ -20,6 +23,7 @@ import {
 function Jobs() {
   const [jobs, setJobs] = useState([]);
   const [search, setSearch] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
@@ -98,18 +102,44 @@ function Jobs() {
   const filteredJobs = jobs.filter((job) => {
     const searchText = search.toLowerCase();
 
-    return (
-      job.title
-        ?.toLowerCase()
-        .includes(searchText) ||
-      job.company
-        ?.toLowerCase()
-        .includes(searchText) ||
-      job.description
-        ?.toLowerCase()
-        .includes(searchText)
-    );
+    const matchesSearch =
+      job.title?.toLowerCase().includes(searchText) ||
+      job.company?.toLowerCase().includes(searchText) ||
+      job.description?.toLowerCase().includes(searchText);
+
+    const experience = String(
+      job.experience_required || ""
+    ).toLowerCase();
+
+    const matchesExperience =
+      experienceFilter === "all" ||
+      (experienceFilter === "fresher" &&
+        (experience.includes("fresher") ||
+          experience.includes("0") ||
+          experience.includes("entry"))) ||
+      (experienceFilter === "junior" &&
+        (experience.includes("1") ||
+          experience.includes("2") ||
+          experience.includes("junior"))) ||
+      (experienceFilter === "senior" &&
+        (experience.includes("3") ||
+          experience.includes("4") ||
+          experience.includes("5") ||
+          experience.includes("senior")));
+
+    return matchesSearch && matchesExperience;
   });
+
+  const jobsWithSkills = jobs.filter(
+    (job) =>
+      Array.isArray(job.required_skills)
+        ? job.required_skills.length > 0
+        : Boolean(job.required_skills)
+  ).length;
+
+  const jobsWithExperience = jobs.filter(
+    (job) => Boolean(job.experience_required)
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -154,9 +184,9 @@ function Jobs() {
           SEARCH + REFRESH
       ====================================== */}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_auto]">
 
-        <div className="relative flex-1">
+        <div className="relative">
 
           <Search
             size={19}
@@ -173,6 +203,24 @@ function Jobs() {
             className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
           />
 
+        </div>
+
+        <div className="relative">
+          <SlidersHorizontal
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <select
+            value={experienceFilter}
+            onChange={(e) => setExperienceFilter(e.target.value)}
+            className="h-full min-w-[190px] rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-9 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          >
+            <option value="all">All Experience</option>
+            <option value="fresher">Fresher / Entry</option>
+            <option value="junior">1 - 2 Years</option>
+            <option value="senior">3+ Years</option>
+          </select>
         </div>
 
         <button
@@ -195,8 +243,61 @@ function Jobs() {
       </div>
 
       {/* ======================================
-          LOADING
+          JOB STATS
       ====================================== */}
+
+      {!loading && !error && jobs.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Total Jobs
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-800">
+              {jobs.length}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Job openings created
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              With Skills
+            </p>
+            <p className="mt-2 text-2xl font-bold text-indigo-600">
+              {jobsWithSkills}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Jobs with skill requirements
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Experience Defined
+            </p>
+            <p className="mt-2 text-2xl font-bold text-green-600">
+              {jobsWithExperience}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Jobs with experience criteria
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Showing
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-800">
+              {filteredJobs.length}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              After current filters
+            </p>
+          </div>
+        </div>
+      )}
+
 
       {loading && (
         <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
@@ -288,7 +389,7 @@ function Jobs() {
             {filteredJobs.map((job) => (
               <div
                 key={job.id}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
               >
 
                 {/* ==================================
@@ -347,16 +448,37 @@ function Jobs() {
 
                     </div>
 
-                    <p className="mt-1 line-clamp-2 text-sm font-medium text-slate-700">
-                      {Array.isArray(
-                        job.required_skills
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(Array.isArray(job.required_skills)
+                        ? job.required_skills
+                        : typeof job.required_skills === "string"
+                          ? job.required_skills
+                              .split(",")
+                              .map((skill) => skill.trim())
+                              .filter(Boolean)
+                          : []
                       )
-                        ? job.required_skills.join(
-                            ", "
-                          )
-                        : job.required_skills ||
-                          "Not specified"}
-                    </p>
+                        .slice(0, 5)
+                        .map((skill, index) => (
+                          <span
+                            key={`${skill}-${index}`}
+                            className="rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
+                          >
+                            {String(skill)}
+                          </span>
+                        ))}
+
+                      {((Array.isArray(job.required_skills)
+                        ? job.required_skills
+                        : typeof job.required_skills === "string"
+                          ? job.required_skills.split(",").filter(Boolean)
+                          : []
+                      ).length === 0) && (
+                        <span className="text-sm font-medium text-slate-400">
+                          Not specified
+                        </span>
+                      )}
+                    </div>
 
                   </div>
 
@@ -393,17 +515,22 @@ function Jobs() {
 
                   </div>
 
-                  <div className="flex gap-2">
-
-                    {/* VIEW DETAILS */}
+                  <div className="flex flex-wrap gap-2">
 
                     <Link
                       to={`/jobs/${job.id}`}
                       className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
                     >
                       <Eye size={16} />
-
                       View Details
+                    </Link>
+
+                    <Link
+                      to={`/matching?jobId=${job.id}`}
+                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    >
+                      <Users size={16} />
+                      Match Resume
                     </Link>
 
                     {/* DELETE */}

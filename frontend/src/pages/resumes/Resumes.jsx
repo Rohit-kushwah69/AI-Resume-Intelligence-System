@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Search,
@@ -6,6 +7,11 @@ import {
   Sparkles,
   RefreshCw,
   Trash2,
+  MessageSquare,
+  Briefcase,
+  Filter,
+  Plus,
+  Users,
 } from "lucide-react";
 
 import {
@@ -19,6 +25,8 @@ function Resumes() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [scoreFilter, setScoreFilter] = useState("all");
+  const navigate = useNavigate();
 
   // ==========================================
   // FETCH RESUMES
@@ -99,73 +107,153 @@ function Resumes() {
   // SEARCH
   // ==========================================
 
-  const filteredResumes = resumes.filter(
-    (resume) => {
-      const searchText =
-        search.toLowerCase();
+  const getScore = (resume) =>
+    Number(resume.ai_analysis?.resume_score ?? resume.resume_score ?? 0);
 
-      return (
-        resume.name
-          ?.toLowerCase()
-          .includes(searchText) ||
-        resume.email
-          ?.toLowerCase()
-          .includes(searchText)
-      );
-    }
-  );
+  const filteredResumes = useMemo(() => {
+    const searchText = search.toLowerCase().trim();
+
+    return resumes.filter((resume) => {
+      const matchesSearch =
+        !searchText ||
+        resume.name?.toLowerCase().includes(searchText) ||
+        resume.email?.toLowerCase().includes(searchText) ||
+        resume.phone?.toLowerCase().includes(searchText);
+
+      const score = getScore(resume);
+      const matchesScore =
+        scoreFilter === "all" ||
+        (scoreFilter === "high" && score >= 80) ||
+        (scoreFilter === "medium" && score >= 60 && score < 80) ||
+        (scoreFilter === "low" && score > 0 && score < 60) ||
+        (scoreFilter === "not_scored" && score === 0);
+
+      return matchesSearch && matchesScore;
+    });
+  }, [resumes, search, scoreFilter]);
+
+  const stats = useMemo(() => {
+    const scored = resumes.filter((resume) => getScore(resume) > 0);
+    const average =
+      scored.length > 0
+        ? Math.round(
+            scored.reduce((sum, resume) => sum + getScore(resume), 0) /
+              scored.length
+          )
+        : 0;
+
+    return {
+      total: resumes.length,
+      analyzed: scored.length,
+      average,
+      high: resumes.filter((resume) => getScore(resume) >= 80).length,
+    };
+  }, [resumes]);
 
   return (
     <div className="space-y-6">
 
-      {/* ======================================
-          HEADER
-      ====================================== */}
-
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            Resumes
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Manage and analyze uploaded candidate resumes.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <FileText size={22} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Resumes</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Manage, analyze and match candidate resumes.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={fetchResumes}
-          className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
-        >
-          <RefreshCw size={17} />
+        <div className="flex gap-3">
+          <button
+            onClick={fetchResumes}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
 
-          Refresh
-        </button>
-
+          <button
+            onClick={() => navigate("/resumes/upload")}
+            className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <Plus size={17} />
+            Upload Resume
+          </button>
+        </div>
       </div>
 
-      {/* ======================================
-          SEARCH
-      ====================================== */}
-
-      <div className="relative">
-
-        <Search
-          size={19}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+      {/* STATS */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard icon={Users} label="Total Resumes" value={stats.total} />
+        <StatCard icon={Sparkles} label="AI Analyzed" value={stats.analyzed} />
+        <StatCard
+          icon={FileText}
+          label="Average Score"
+          value={stats.average ? `${stats.average}%` : "--"}
         />
+        <StatCard icon={Briefcase} label="Strong Profiles" value={stats.high} />
+      </div>
 
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-indigo-400"
-        />
+      {/* SEARCH + FILTER */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="relative flex-1">
+            <Search
+              size={19}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Search by name, email or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-indigo-400 focus:bg-white"
+            />
+          </div>
 
+          <div className="relative lg:w-56">
+            <Filter
+              size={17}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-600 outline-none focus:border-indigo-400"
+            >
+              <option value="all">All Scores</option>
+              <option value="high">80+ Strong</option>
+              <option value="medium">60–79 Moderate</option>
+              <option value="low">1–59 Needs Review</option>
+              <option value="not_scored">Not Scored</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+          <span>
+            Showing <b className="text-slate-600">{filteredResumes.length}</b> of{" "}
+            <b className="text-slate-600">{resumes.length}</b> resumes
+          </span>
+          {(search || scoreFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setScoreFilter("all");
+              }}
+              className="font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ======================================
@@ -280,12 +368,34 @@ function Resumes() {
                         Resume Score
                       </p>
 
-                      <p className="text-2xl font-bold text-indigo-600">
-                        {resume.ai_analysis
-                          ?.resume_score ??
-                          resume.resume_score ??
-                          "--"}
+                      <p className={`text-2xl font-bold ${
+                        getScore(resume) >= 80
+                          ? "text-emerald-600"
+                          : getScore(resume) >= 60
+                          ? "text-amber-600"
+                          : getScore(resume) > 0
+                          ? "text-rose-600"
+                          : "text-slate-400"
+                      }`}>
+                        {getScore(resume) > 0 ? `${getScore(resume)}%` : "--"}
                       </p>
+                      <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        getScore(resume) >= 80
+                          ? "bg-emerald-50 text-emerald-700"
+                          : getScore(resume) >= 60
+                          ? "bg-amber-50 text-amber-700"
+                          : getScore(resume) > 0
+                          ? "bg-rose-50 text-rose-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}>
+                        {getScore(resume) >= 80
+                          ? "Strong"
+                          : getScore(resume) >= 60
+                          ? "Moderate"
+                          : getScore(resume) > 0
+                          ? "Needs Review"
+                          : "Not Scored"}
+                      </span>
 
                     </div>
 
@@ -356,67 +466,43 @@ function Resumes() {
                       ACTIONS
                   ================================== */}
 
-                  <div className="mt-5 flex gap-3 border-t border-slate-100 pt-4">
-
-                    {/* VIEW RESUME */}
-
+                  <div className="mt-5 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-4">
                     <button
-                      onClick={() => {
-                        window.location.href = `/resumes/${resume.id}`;
-                      }}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                      onClick={() => navigate(`/resumes/${resume.id}`)}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                     >
-                      <Eye size={17} />
-
-                      View Resume
+                      <Eye size={16} />
+                      View
                     </button>
 
-                    {/* AI ANALYSIS */}
-
                     <button
-                      onClick={() => {
-                        window.location.href = `/resumes/${resume.id}/analysis`;
-                      }}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                      onClick={() => navigate(`/resumes/${resume.id}/analysis`)}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
                     >
-                      <Sparkles size={17} />
-
-                      AI Analysis
+                      <Sparkles size={16} />
+                      Analysis
                     </button>
 
-                    {/* DELETE */}
+                    <button
+                      onClick={() => navigate(`/resume-chat/${resume.id}`)}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100"
+                    >
+                      <MessageSquare size={16} />
+                      AI Chat
+                    </button>
 
                     <button
-                      onClick={() =>
-                        handleDeleteResume(
-                          resume.id,
-                          resume.name
-                        )
-                      }
-                      disabled={
-                        deletingId ===
-                        resume.id
-                      }
-                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleDeleteResume(resume.id, resume.name)}
+                      disabled={deletingId === resume.id}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-
-                      {deletingId ===
-                      resume.id ? (
-                        <RefreshCw
-                          size={17}
-                          className="animate-spin"
-                        />
+                      {deletingId === resume.id ? (
+                        <RefreshCw size={16} className="animate-spin" />
                       ) : (
-                        <Trash2 size={17} />
+                        <Trash2 size={16} />
                       )}
-
-                      {deletingId ===
-                      resume.id
-                        ? "Deleting..."
-                        : "Delete"}
-
+                      {deletingId === resume.id ? "Deleting" : "Delete"}
                     </button>
-
                   </div>
 
                 </div>
@@ -426,6 +512,23 @@ function Resumes() {
           </div>
         )}
 
+    </div>
+  );
+}
+
+
+function StatCard({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+          <Icon size={19} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-slate-400">{label}</p>
+          <p className="mt-1 text-xl font-bold text-slate-800">{value}</p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,16 @@ import {
   ArrowRight,
   Sparkles,
   Save,
+  Filter,
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  UserCircle2,
+  BarChart3,
+  History,
+  MessageSquare,
+  UserSearch,
+  Briefcase,
 } from "lucide-react";
 
 import { getJobs } from "../../services/jobApi";
@@ -34,6 +44,8 @@ function MatchResults() {
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [selectedJobData, setSelectedJobData] = useState(null);
+  const [selectedCandidateData, setSelectedCandidateData] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -138,6 +150,29 @@ function MatchResults() {
     }
   );
 
+  useEffect(() => {
+    setSelectedJobData(
+      jobs.find((job) => String(job.id) === String(selectedJob)) || null
+    );
+  }, [jobs, selectedJob]);
+
+  useEffect(() => {
+    setSelectedCandidateData(
+      candidates.find(
+        (candidate) => String(candidate.id) === String(selectedCandidate)
+      ) || null
+    );
+  }, [candidates, selectedCandidate]);
+
+  const totalJobs = jobs.length;
+  const totalCandidates = candidates.length;
+
+  const getScoreLabel = (score) => {
+    if (score >= 80) return "Strong Match";
+    if (score >= 60) return "Moderate Match";
+    return "Needs Review";
+  };
+
   const getScoreClass = (score) => {
     if (score >= 80) {
       return "bg-green-100 text-green-700";
@@ -190,7 +225,7 @@ function MatchResults() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
             <BrainCircuit size={23} />
@@ -205,6 +240,70 @@ function MatchResults() {
               Match candidates with jobs using AI-powered
               analysis
             </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={fetchData}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+        >
+          <RefreshCw size={17} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <BriefcaseBusiness size={19} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Available Jobs
+              </p>
+              <p className="mt-1 text-2xl font-bold text-slate-800">
+                {totalJobs}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+              <Users size={19} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Candidates
+              </p>
+              <p className="mt-1 text-2xl font-bold text-slate-800">
+                {totalCandidates}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600">
+              <BarChart3 size={19} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Matching Engine
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-800">
+                AI Powered
+              </p>
+              <p className="text-xs text-slate-400">
+                Skills + Semantic + Experience
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -312,6 +411,44 @@ function MatchResults() {
           </div>
         </div>
 
+        {/* Current Selection */}
+        {(selectedJobData || selectedCandidateData) && (
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-indigo-500">
+                <BriefcaseBusiness size={14} />
+                Selected Job
+              </div>
+              <p className="mt-1 font-semibold text-slate-800">
+                {selectedJobData?.title || "Not selected"}
+              </p>
+              {selectedJobData?.company && (
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {selectedJobData.company}
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-500">
+                <UserCircle2 size={14} />
+                Selected Candidate
+              </div>
+              <p className="mt-1 font-semibold text-slate-800">
+                {selectedCandidateData?.name ||
+                  (selectedCandidateData
+                    ? `Candidate #${selectedCandidateData.id}`
+                    : "Not selected")}
+              </p>
+              {selectedCandidateData?.email && (
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {selectedCandidateData.email}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Match Error */}
         {matchError && (
           <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -320,7 +457,11 @@ function MatchResults() {
         )}
 
         {/* Match Button */}
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-400">
+            The engine compares exact skills, semantic similarity and experience.
+          </p>
+
           <button
             onClick={handleMatch}
             disabled={matching}
@@ -365,17 +506,68 @@ function MatchResults() {
               </div>
 
               <div
-                className={`rounded-2xl px-6 py-4 text-center ${getScoreClass(
+                className={`flex h-28 w-28 shrink-0 flex-col items-center justify-center rounded-full ${getScoreClass(
                   result.final_match_score
                 )}`}
               >
-                <p className="text-xs font-semibold uppercase">
+                <p className="text-[10px] font-bold uppercase tracking-wide">
                   Match Score
                 </p>
-
-                <p className="mt-1 text-4xl font-bold">
-                  {result.final_match_score}%
+                <p className="mt-1 text-3xl font-bold">
+                  {result.final_match_score ?? 0}%
                 </p>
+                <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-wide">
+                  {getScoreLabel(result.final_match_score ?? 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Result Overview */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 size={20} className="text-green-600" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Matched Skills
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-green-600">
+                    {Array.isArray(result.matched_skills)
+                      ? result.matched_skills.length
+                      : 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <AlertCircle size={20} className="text-red-500" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Missing Skills
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-red-500">
+                    {Array.isArray(result.missing_skills)
+                      ? result.missing_skills.length
+                      : 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <TrendingUp size={20} className="text-indigo-600" />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Overall Compatibility
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-indigo-600">
+                    {result.final_match_score ?? 0}%
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -445,6 +637,33 @@ function MatchResults() {
             </div>
           )}
 
+          {/* Recruiter Actions */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Link
+              to={result.resume_id ? `/resumes/${result.resume_id}` : "#"}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <UserSearch size={17} />
+              Candidate Profile
+            </Link>
+
+            <Link
+              to={result.resume_id ? `/resume-chat/${result.resume_id}` : "#"}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+            >
+              <MessageSquare size={17} />
+              Chat with Resume
+            </Link>
+
+            <Link
+              to={result.job_id ? `/jobs/${result.job_id}` : "#"}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <BriefcaseBusiness size={17} />
+              Job Details
+            </Link>
+          </div>
+
           {/* Details Button */}
           <div className="flex flex-col items-end gap-3 sm:flex-row sm:justify-end">
             {saveMessage && (
@@ -480,6 +699,14 @@ function MatchResults() {
             </button>
 
             <Link
+              to="/matching/history"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <History size={17} />
+              Match History
+            </Link>
+
+            <Link
               to={`/matching/${result.job_id}/${result.resume_id}`}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-900"
             >
@@ -500,13 +727,30 @@ function ScoreCard({ title, score }) {
         {title}
       </p>
 
-      <div className="mt-3 flex items-end gap-1">
-        <span className="text-3xl font-bold text-slate-800">
-          {score ?? 0}
-        </span>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <div>
+          <span className="text-3xl font-bold text-slate-800">
+            {score ?? 0}
+          </span>
+          <span className="mb-1 ml-1 text-sm text-slate-400">
+            %
+          </span>
+        </div>
 
-        <span className="mb-1 text-sm text-slate-400">
-          %
+        <span
+          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
+            (score ?? 0) >= 80
+              ? "bg-green-50 text-green-700"
+              : (score ?? 0) >= 60
+                ? "bg-yellow-50 text-yellow-700"
+                : "bg-red-50 text-red-700"
+          }`}
+        >
+          {(score ?? 0) >= 80
+            ? "Strong"
+            : (score ?? 0) >= 60
+              ? "Moderate"
+              : "Low"}
         </span>
       </div>
 

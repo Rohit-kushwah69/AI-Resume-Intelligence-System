@@ -1,31 +1,70 @@
 import API from "./api";
 
-// Get all jobs
+// ==========================================
+// GET ALL JOBS
+// ==========================================
+
 export const getJobs = async () => {
   const response = await API.get("/jobs/");
   return response.data;
 };
 
-// Get single job
+
+// ==========================================
+// GET SINGLE JOB
+// ==========================================
+
 export const getJobById = async (id) => {
   const response = await API.get(`/jobs/${id}`);
   return response.data;
 };
 
-// Create new job
+
+// ==========================================
+// CREATE NEW JOB
+// ==========================================
+
 export const createJob = async (jobData) => {
   const response = await API.post("/jobs/", jobData);
   return response.data;
 };
 
-// Count 
-export const getMatchCount = async () => {
-  const response = await API.get("/jobs/match/count");
+
+// ==========================================
+// UPDATE JOB
+// ==========================================
+
+export const updateJob = async (id, jobData) => {
+  const response = await API.put(
+    `/jobs/${id}`,
+    jobData
+  );
+
   return response.data;
 };
 
-// delete
+
+// ==========================================
+// GET TOTAL MATCH COUNT
+// ==========================================
+
+export const getMatchCount = async () => {
+  const response = await API.get(
+    "/jobs/match/count"
+  );
+
+  return response.data;
+};
+
+
+// ==========================================
+// DELETE JOB
+// ==========================================
+
 export const deleteJob = async (id) => {
-  const response = await API.delete(`/jobs/${id}`);
+  const response = await API.delete(
+    `/jobs/${id}`
+  );
+
   return response.data;
 };

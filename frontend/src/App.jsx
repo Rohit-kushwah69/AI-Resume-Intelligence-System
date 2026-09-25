@@ -15,6 +15,7 @@ import ResumeAnalysis from "./pages/resumes/ResumeAnalysis";
 import Jobs from "./pages/jobs/Jobs";
 import CreateJob from "./pages/jobs/CreateJob";
 import JobDetails from "./pages/jobs/JobDetails";
+import EditJob from "./pages/jobs/EditJob";
 
 import Candidates from "./pages/candidates/Candidates";
 import CandidateDetails from "./pages/candidates/CandidateDetails";
@@ -26,11 +27,11 @@ import MatchHistory from "./pages/matching/MatchHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+import ResumeChat from "./pages/ResumeChat";
 
 function App() {
   return (
     <BrowserRouter>
-
       <Routes>
 
         {/* =========================
@@ -42,24 +43,30 @@ function App() {
           element={<Login />}
         />
 
-
         {/* =========================
             PROTECTED ROUTES
         ========================= */}
 
         <Route element={<ProtectedRoute />}>
 
+          {/* =========================
+              MAIN APPLICATION LAYOUT
+          ========================= */}
+
           <Route path="/" element={<Layout />}>
 
-            {/* Dashboard */}
+            {/* =========================
+                DASHBOARD
+            ========================= */}
 
             <Route
               index
               element={<Dashboard />}
             />
 
-
-            {/* Resumes */}
+            {/* =========================
+                RESUMES
+            ========================= */}
 
             <Route
               path="resumes"
@@ -81,8 +88,9 @@ function App() {
               element={<ResumeAnalysis />}
             />
 
-
-            {/* Jobs */}
+            {/* =========================
+                JOBS
+            ========================= */}
 
             <Route
               path="jobs"
@@ -94,13 +102,21 @@ function App() {
               element={<CreateJob />}
             />
 
+            {/* Edit Job */}
+            <Route
+              path="jobs/:id/edit"
+              element={<EditJob />}
+            />
+
+            {/* Job Details */}
             <Route
               path="jobs/:id"
               element={<JobDetails />}
             />
 
-
-            {/* Candidates */}
+            {/* =========================
+                CANDIDATES
+            ========================= */}
 
             <Route
               path="candidates"
@@ -112,8 +128,9 @@ function App() {
               element={<CandidateDetails />}
             />
 
-
-            {/* Matching */}
+            {/* =========================
+                MATCHING
+            ========================= */}
 
             <Route
               path="matching"
@@ -130,16 +147,18 @@ function App() {
               element={<MatchHistory />}
             />
 
-
-            {/* Settings */}
+            {/* =========================
+                SETTINGS
+            ========================= */}
 
             <Route
               path="settings"
               element={<Settings />}
             />
 
-
-            {/* Not Found */}
+            {/* =========================
+                NOT FOUND
+            ========================= */}
 
             <Route
               path="*"
@@ -148,10 +167,18 @@ function App() {
 
           </Route>
 
+          {/* =========================
+              AI RESUME CHAT
+          ========================= */}
+
+          <Route
+            path="/resume-chat/:resumeId"
+            element={<ResumeChat />}
+          />
+
         </Route>
 
       </Routes>
-
     </BrowserRouter>
   );
 }

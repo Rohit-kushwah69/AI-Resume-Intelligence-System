@@ -11,6 +11,11 @@ import {
   Eye,
   BrainCircuit,
   FileText,
+  MessageSquare,
+  GraduationCap,
+  Briefcase,
+  Award,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { getResumes } from "../../services/resumeApi";
@@ -18,6 +23,7 @@ import { getResumes } from "../../services/resumeApi";
 function Candidates() {
   const [candidates, setCandidates] = useState([]);
   const [search, setSearch] = useState("");
+  const [scoreFilter, setScoreFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -60,12 +66,36 @@ function Candidates() {
   const filteredCandidates = candidates.filter((candidate) => {
     const searchText = search.toLowerCase();
 
-    return (
+    const matchesSearch =
       candidate.name?.toLowerCase().includes(searchText) ||
       candidate.email?.toLowerCase().includes(searchText) ||
-      candidate.phone?.toLowerCase().includes(searchText)
-    );
+      candidate.phone?.toLowerCase().includes(searchText);
+
+    const score = Number(candidate.ai_analysis?.resume_score || 0);
+
+    const matchesScore =
+      scoreFilter === "all" ||
+      (scoreFilter === "80" && score >= 80) ||
+      (scoreFilter === "60" && score >= 60 && score < 80) ||
+      (scoreFilter === "below60" && score < 60);
+
+    return matchesSearch && matchesScore;
   });
+
+  const averageScore =
+    candidates.length > 0
+      ? Math.round(
+          candidates.reduce(
+            (total, candidate) =>
+              total + Number(candidate.ai_analysis?.resume_score || 0),
+            0
+          ) / candidates.length
+        )
+      : 0;
+
+  const analyzedCandidates = candidates.filter(
+    (candidate) => Number(candidate.ai_analysis?.resume_score || 0) > 0
+  ).length;
 
   // ==============================
   // RESUME SCORE
@@ -93,6 +123,44 @@ function Candidates() {
     }
 
     return [];
+  };
+
+  const getScoreStyle = (score) => {
+    const value = Number(score || 0);
+
+    if (value >= 80) {
+      return "bg-green-50 text-green-600 border-green-100";
+    }
+
+    if (value >= 60) {
+      return "bg-yellow-50 text-yellow-600 border-yellow-100";
+    }
+
+    return "bg-red-50 text-red-600 border-red-100";
+  };
+
+  const getExperience = (candidate) => {
+    if (!candidate.experience) return "Experience not available";
+
+    if (typeof candidate.experience === "string") {
+      return candidate.experience.length > 100
+        ? `${candidate.experience.slice(0, 100)}...`
+        : candidate.experience;
+    }
+
+    return "Experience available";
+  };
+
+  const getEducation = (candidate) => {
+    if (!candidate.education) return "Education not available";
+
+    if (typeof candidate.education === "string") {
+      return candidate.education.length > 80
+        ? `${candidate.education.slice(0, 80)}...`
+        : candidate.education;
+    }
+
+    return "Education available";
   };
 
   return (
@@ -136,9 +204,9 @@ function Candidates() {
       {/* SEARCH */}
       {/* ============================== */}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto_auto]">
 
-        <div className="relative flex-1">
+        <div className="relative">
 
           <Search
             size={19}
@@ -153,6 +221,24 @@ function Candidates() {
             className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
           />
 
+        </div>
+
+        <div className="relative">
+          <SlidersHorizontal
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <select
+            value={scoreFilter}
+            onChange={(e) => setScoreFilter(e.target.value)}
+            className="h-full min-w-[190px] rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-9 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          >
+            <option value="all">All Scores</option>
+            <option value="80">80% and above</option>
+            <option value="60">60% - 79%</option>
+            <option value="below60">Below 60%</option>
+          </select>
         </div>
 
         <button
@@ -171,8 +257,61 @@ function Candidates() {
       </div>
 
       {/* ============================== */}
-      {/* LOADING */}
+      {/* CANDIDATE STATS */}
       {/* ============================== */}
+
+      {!loading && !error && candidates.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Total Candidates
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-800">
+              {candidates.length}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Uploaded resumes
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Average Resume Score
+            </p>
+            <p className="mt-2 text-2xl font-bold text-indigo-600">
+              {averageScore}%
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Across all candidates
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              AI Analyzed
+            </p>
+            <p className="mt-2 text-2xl font-bold text-green-600">
+              {analyzedCandidates}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Candidates with AI score
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Showing
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-800">
+              {filteredCandidates.length}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              After current filters
+            </p>
+          </div>
+        </div>
+      )}
+
 
       {loading && (
         <div className="flex min-h-[350px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
@@ -296,14 +435,14 @@ function Candidates() {
                     </div>
 
                     {/* Resume Score */}
-                    <div className="rounded-xl bg-indigo-50 px-3 py-2 text-center">
+                    <div className={`rounded-xl border px-3 py-2 text-center ${getScoreStyle(score)}`}>
 
-                      <p className="text-[10px] font-medium uppercase text-indigo-400">
-                        Score
+                      <p className="text-[10px] font-semibold uppercase tracking-wide">
+                        AI Score
                       </p>
 
-                      <p className="text-lg font-bold text-indigo-600">
-                        {score}
+                      <p className="text-lg font-bold">
+                        {score}%
                       </p>
 
                     </div>
@@ -337,6 +476,29 @@ function Candidates() {
                       </div>
                     )}
 
+                  </div>
+
+                  {/* Profile Information */}
+                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <Briefcase size={15} />
+                        Experience
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        {getExperience(candidate)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <GraduationCap size={15} />
+                        Education
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        {getEducation(candidate)}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Skills */}
@@ -385,26 +547,30 @@ function Candidates() {
                   {/* ACTIONS */}
                   {/* ============================== */}
 
-                  <div className="mt-6 flex gap-3 border-t border-slate-100 pt-4">
+                  <div className="mt-6 grid grid-cols-1 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-3">
 
-                    {/* IMPORTANT:
-                        Candidate Details route
-                    */}
                     <Link
                       to={`/candidates/${candidate.id}`}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600"
                     >
-                      <Eye size={17} />
-                      View Profile
+                      <Eye size={16} />
+                      Profile
                     </Link>
 
-                    {/* AI Analysis */}
                     <Link
                       to={`/resumes/${candidate.id}/analysis`}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                     >
-                      <BrainCircuit size={17} />
+                      <BrainCircuit size={16} />
                       AI Analysis
+                    </Link>
+
+                    <Link
+                      to={`/resume-chat/${candidate.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                    >
+                      <MessageSquare size={16} />
+                      AI Chat
                     </Link>
 
                   </div>

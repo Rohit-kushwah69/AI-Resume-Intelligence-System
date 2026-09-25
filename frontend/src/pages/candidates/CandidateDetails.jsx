@@ -17,6 +17,9 @@ import {
   User,
   XCircle,
   Loader2,
+  MessageSquare,
+  History,
+  Sparkles,
 } from "lucide-react";
 
 import { getResumeById } from "../../services/resumeApi";
@@ -394,10 +397,18 @@ function CandidateDetails() {
         <div className="flex flex-wrap gap-3">
           <Link
             to={`/resumes/${candidate.id}/analysis`}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           >
             <BrainCircuit size={18} />
             AI Analysis
+          </Link>
+
+          <Link
+            to={`/resume-chat/${candidate.id}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+          >
+            <MessageSquare size={18} />
+            AI Chat
           </Link>
 
           <Link
@@ -406,6 +417,14 @@ function CandidateDetails() {
           >
             <Target size={18} />
             Match with Job
+          </Link>
+
+          <Link
+            to={`/matching/history?resumeId=${candidate.id}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <History size={18} />
+            Match History
           </Link>
         </div>
       </div>
@@ -486,6 +505,17 @@ function CandidateDetails() {
               <span className="text-xs text-slate-400">
                 / 100
               </span>
+            </div>
+
+            <div className="mt-5 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600">
+                <Sparkles size={14} />
+                AI Resume Evaluation
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Score generated from the resume analysis available in the system.
+              </p>
             </div>
           </div>
         </section>
@@ -986,6 +1016,42 @@ function CandidateDetails() {
           </div>
         </section>
       )}
+
+      {/* Recruiter Actions */}
+      <section className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles size={19} className="text-indigo-600" />
+              <h2 className="font-semibold text-slate-800">
+                Continue Candidate Evaluation
+              </h2>
+            </div>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Analyze, chat with, or compare this candidate with available jobs.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to={`/resume-chat/${candidate.id}`}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            >
+              <MessageSquare size={17} />
+              Chat with Resume
+            </Link>
+
+            <Link
+              to={`/resumes/${candidate.id}/analysis`}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <BrainCircuit size={17} />
+              Full AI Analysis
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   TrendingUp,
   AlertTriangle,
   XCircle,
+  MessageSquare,
 } from "lucide-react";
 
 import { getResumeById } from "../../services/resumeApi";
@@ -120,15 +121,27 @@ function ResumeAnalysis() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-2.5">
-          <Sparkles
-            size={18}
-            className="text-indigo-600"
-          />
+        <div className="flex flex-wrap items-center gap-2">
 
-          <span className="text-sm font-semibold text-indigo-700">
-            AI Analysis
-          </span>
+          <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-2.5">
+            <Sparkles
+              size={18}
+              className="text-indigo-600"
+            />
+
+            <span className="text-sm font-semibold text-indigo-700">
+              AI Analysis
+            </span>
+          </div>
+
+          <button
+            onClick={() => navigate(`/resume-chat/${id}`)}
+            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <MessageSquare size={17} />
+            Chat with Resume
+          </button>
+
         </div>
       </div>
 
@@ -325,14 +338,55 @@ function ResumeAnalysis() {
         )}
       </AnalysisCard>
 
+      {/* AI Chat CTA */}
+      <div className="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-purple-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+              <MessageSquare className="h-6 w-6 text-indigo-600" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-slate-800">
+                Ask AI about this resume
+              </h2>
+
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                Ask questions about skills, experience, projects,
+                education, certifications, and other resume details.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate(`/resume-chat/${id}`)}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          >
+            <MessageSquare size={18} />
+            Start AI Chat
+          </button>
+
+        </div>
+      </div>
+
+
       {/* Bottom Action */}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-3">
         <button
           onClick={() => navigate(`/resumes/${id}`)}
           className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
         >
           <ArrowLeft size={17} />
           Back to Resume
+        </button>
+
+        <button
+          onClick={() => navigate(`/resume-chat/${id}`)}
+          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        >
+          <MessageSquare size={17} />
+          Chat with Resume
         </button>
       </div>
     </div>

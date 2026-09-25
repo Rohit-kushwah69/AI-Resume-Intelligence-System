@@ -12,6 +12,13 @@ import {
   Target,
   CheckCircle2,
   BrainCircuit,
+  SlidersHorizontal,
+  ArrowUpDown,
+  X,
+  Sparkles,
+  MessageSquare,
+  UserCircle2,
+  Building2,
 } from "lucide-react";
 
 import { getResumes } from "../../services/resumeApi";
@@ -23,6 +30,8 @@ function MatchHistory() {
 
   const [search, setSearch] = useState("");
   const [selectedResume, setSelectedResume] = useState("all");
+  const [scoreFilter, setScoreFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("latest");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -93,21 +102,59 @@ function MatchHistory() {
     fetchHistory();
   }, [selectedResume]);
 
-  const filteredMatches = matches.filter((match) => {
-    const searchText = search.toLowerCase();
+  const getCandidateName = (resumeId) => {
+    const resume = resumes.find((item) => String(item.id) === String(resumeId));
+    return resume?.name || `Candidate #${resumeId}`;
+  };
 
-    return (
-      match.job_title
-        ?.toLowerCase()
-        .includes(searchText) ||
-      match.company
-        ?.toLowerCase()
-        .includes(searchText) ||
-      String(match.resume_id)
-        .toLowerCase()
-        .includes(searchText)
-    );
-  });
+  const getScoreLabel = (score) => {
+    const value = Number(score || 0);
+    if (value >= 80) return { label: "Strong Match", className: "bg-green-50 text-green-700 border-green-200" };
+    if (value >= 60) return { label: "Moderate Match", className: "bg-yellow-50 text-yellow-700 border-yellow-200" };
+    return { label: "Needs Review", className: "bg-red-50 text-red-700 border-red-200" };
+  };
+
+  const renderSkill = (skill) => {
+    if (typeof skill === "string") return skill;
+    if (skill && typeof skill === "object") {
+      return skill.name || skill.skill || skill.title || skill.text || JSON.stringify(skill);
+    }
+    return String(skill);
+  };
+
+  const filteredMatches = matches
+    .filter((match) => {
+      const searchText = search.trim().toLowerCase();
+      const candidateName = getCandidateName(match.resume_id).toLowerCase();
+
+      const matchesSearch =
+        !searchText ||
+        match.job_title?.toLowerCase().includes(searchText) ||
+        match.company?.toLowerCase().includes(searchText) ||
+        candidateName.includes(searchText) ||
+        String(match.resume_id).includes(searchText);
+
+      const score = Number(match.final_match_score || 0);
+
+      const matchesScore =
+        scoreFilter === "all" ||
+        (scoreFilter === "80" && score >= 80) ||
+        (scoreFilter === "60" && score >= 60 && score < 80) ||
+        (scoreFilter === "below60" && score < 60);
+
+      return matchesSearch && matchesScore;
+    })
+    .sort((a, b) => {
+      if (sortBy === "score-high") {
+        return Number(b.final_match_score || 0) - Number(a.final_match_score || 0);
+      }
+
+      if (sortBy === "score-low") {
+        return Number(a.final_match_score || 0) - Number(b.final_match_score || 0);
+      }
+
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
 
   const getScoreStyle = (score) => {
     const value = Number(score || 0);
@@ -122,6 +169,43 @@ function MatchHistory() {
 
     return "bg-red-50 text-red-600";
   };
+
+  const averageScore =
+    filteredMatches.length > 0
+      ? Math.round(
+          filteredMatches.reduce(
+            (total, match) =>
+              total + Number(match.final_match_score || 0),
+            0
+          ) / filteredMatches.length
+        )
+      : 0;
+
+  const strongMatches = filteredMatches.filter(
+    (match) => Number(match.final_match_score || 0) >= 80
+  ).length;
+
+  const recentMatch = filteredMatches.length
+    ? [...filteredMatches].sort(
+        (a, b) =>
+          new Date(b.created_at || 0) -
+          new Date(a.created_at || 0)
+      )[0]
+    : null;
+
+  const latestScore = recentMatch
+    ? Math.round(Number(recentMatch.final_match_score || 0))
+    : 0;
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedResume("all");
+    setScoreFilter("all");
+    setSortBy("latest");
+  };
+
+  const hasFilters =
+    search.trim() || selectedResume !== "all" || scoreFilter !== "all" || sortBy !== "latest";
 
   return (
     <div className="space-y-6">
@@ -159,49 +243,164 @@ function MatchHistory() {
 
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Search */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={18} className="text-indigo-600" />
+            <h2 className="text-sm font-semibold text-slate-800">
+              Filter & Sort Matches
+            </h2>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+              {filteredMatches.length} shown
+            </span>
+          </div>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              <X size={14} />
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="relative">
             <Search
               size={19}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
-
             <input
               type="text"
               placeholder="Search job, company or candidate..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
 
-          {/* Candidate Filter */}
           <select
             value={selectedResume}
-            onChange={(e) =>
-              setSelectedResume(e.target.value)
-            }
+            onChange={(e) => setSelectedResume(e.target.value)}
             className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
           >
-            <option value="all">
-              All Candidates
-            </option>
-
+            <option value="all">All Candidates</option>
             {resumes.map((resume) => (
-              <option
-                key={resume.id}
-                value={resume.id}
-              >
-                {resume.name ||
-                  `Candidate #${resume.id}`}
+              <option key={resume.id} value={resume.id}>
+                {resume.name || `Candidate #${resume.id}`}
               </option>
             ))}
           </select>
+
+          <select
+            value={scoreFilter}
+            onChange={(e) => setScoreFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          >
+            <option value="all">All Match Scores</option>
+            <option value="80">Strong — 80%+</option>
+            <option value="60">Moderate — 60–79%</option>
+            <option value="below60">Low — Below 60%</option>
+          </select>
+
+          <div className="relative">
+            <ArrowUpDown
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="latest">Latest First</option>
+              <option value="score-high">Highest Score</option>
+              <option value="score-low">Lowest Score</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      {/* Summary Stats */}
+      {!loading && !error && filteredMatches.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Total Matches
+              </p>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                <History size={17} />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-bold text-slate-800">
+              {filteredMatches.length}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Saved resume-job matches
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Average Score
+              </p>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                <Target size={17} />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-bold text-indigo-600">
+              {averageScore}%
+            </p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-indigo-500 transition-all"
+                style={{ width: `${Math.min(averageScore, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Strong Matches
+              </p>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                <CheckCircle2 size={17} />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-bold text-green-600">
+              {strongMatches}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {filteredMatches.length
+                ? `${Math.round((strongMatches / filteredMatches.length) * 100)}% of filtered matches`
+                : "No matches"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Latest Match
+              </p>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                <Sparkles size={17} />
+              </div>
+            </div>
+            <p className="mt-3 truncate text-lg font-bold text-slate-800">
+              {recentMatch?.job_title || "—"}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {recentMatch
+                ? `${latestScore}% match • ${getCandidateName(recentMatch.resume_id)}`
+                : "No recent match"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -267,7 +466,7 @@ function MatchHistory() {
             {filteredMatches.map((match) => (
               <div
                 key={match.match_id}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
               >
                 {/* Top */}
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -290,7 +489,7 @@ function MatchHistory() {
                       <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-400">
                         <span className="inline-flex items-center gap-1">
                           <User size={13} />
-                          Resume #{match.resume_id}
+                          {getCandidateName(match.resume_id)}
                         </span>
 
                         {match.created_at && (
@@ -306,23 +505,51 @@ function MatchHistory() {
                   </div>
 
                   {/* Final Score */}
-                  <div
-                    className={`rounded-xl px-5 py-3 text-center ${getScoreStyle(
-                      match.final_match_score
-                    )}`}
-                  >
+                  <div className="flex items-center gap-3">
+                    <div className="hidden h-14 w-14 items-center justify-center rounded-full border-4 border-indigo-100 bg-white text-sm font-bold text-indigo-600 sm:flex">
+                      {Math.round(Number(match.final_match_score || 0))}%
+                    </div>
+
+                    <div
+                      className={`rounded-xl px-5 py-3 text-center ${getScoreStyle(
+                        match.final_match_score
+                      )}`}
+                    >
                     <p className="text-[10px] font-semibold uppercase tracking-wide">
                       Match Score
                     </p>
 
-                    <p className="mt-1 text-2xl font-bold">
-                      {Math.round(
-                        Number(
-                          match.final_match_score || 0
-                        )
-                      )}
-                      %
-                    </p>
+                      <p className="mt-1 text-2xl font-bold">
+                        {Math.round(
+                          Number(
+                            match.final_match_score || 0
+                          )
+                        )}
+                        %
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <div className="mb-1.5 flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-500">
+                      Overall compatibility
+                    </span>
+                    <span className="font-semibold text-slate-700">
+                      {Math.round(Number(match.final_match_score || 0))}%
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-indigo-500 transition-all"
+                      style={{
+                        width: `${Math.min(
+                          Math.max(Number(match.final_match_score || 0), 0),
+                          100
+                        )}%`,
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -414,10 +641,7 @@ function MatchHistory() {
                               key={index}
                               className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-600"
                             >
-                              {typeof skill ===
-                              "object"
-                                ? JSON.stringify(skill)
-                                : String(skill)}
+                              {renderSkill(skill)}
                             </span>
                           )
                         )
@@ -445,10 +669,7 @@ function MatchHistory() {
                               key={index}
                               className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600"
                             >
-                              {typeof skill ===
-                              "object"
-                                ? JSON.stringify(skill)
-                                : String(skill)}
+                              {renderSkill(skill)}
                             </span>
                           )
                         )
@@ -461,15 +682,81 @@ function MatchHistory() {
                   </div>
                 </div>
 
-                {/* Action */}
-                <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
-                  <Link
-                    to={`/matching/${match.job_id}/${match.resume_id}`}
-                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                  >
-                    <Eye size={17} />
-                    View Match Details
-                  </Link>
+                {/* Recruiter Actions */}
+                <div className="mt-6 border-t border-slate-100 pt-5">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        Recruiter Actions
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Review the candidate, job and saved match analysis.
+                      </p>
+                    </div>
+                    {(() => {
+                      const status = getScoreLabel(match.final_match_score);
+                      return (
+                        <span
+                          className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${status.className}`}
+                        >
+                          <CheckCircle2 size={13} />
+                          {status.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {match.ai_analysis && (
+                    <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                      <div className="flex items-start gap-2">
+                        <Sparkles size={16} className="mt-0.5 shrink-0 text-indigo-600" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                            AI Analysis
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
+                            {typeof match.ai_analysis === "object"
+                              ? JSON.stringify(match.ai_analysis)
+                              : String(match.ai_analysis)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      to={`/matching/${match.job_id}/${match.resume_id}`}
+                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    >
+                      <Eye size={16} />
+                      View Match
+                    </Link>
+
+                    <Link
+                      to={`/candidates/${match.resume_id}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                    >
+                      <UserCircle2 size={16} />
+                      Candidate
+                    </Link>
+
+                    <Link
+                      to={`/jobs/${match.job_id}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                    >
+                      <Building2 size={16} />
+                      Job
+                    </Link>
+
+                    <Link
+                      to={`/resume-chat/${match.resume_id}`}
+                      className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
+                    >
+                      <MessageSquare size={16} />
+                      Chat with Resume
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

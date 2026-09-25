@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -35,6 +35,42 @@ function Navbar() {
 
   const [showProfile, setShowProfile] =
     useState(false);
+
+  const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setShowProfile(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowNotifications(false);
+        setShowProfile(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // ==========================================
   // SEARCH
@@ -125,10 +161,9 @@ function Navbar() {
           <input
             type="text"
             placeholder="Search resumes, jobs, candidates..."
+            aria-label="Search resumes, jobs, candidates"
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
+            onChange={(e) => setSearch(e.target.value)}
             className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-11 pr-10 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50"
           />
 
@@ -283,11 +318,10 @@ function Navbar() {
 
             <ChevronDown
               size={16}
-              className={`hidden text-slate-400 transition-transform lg:block ${
-                showProfile
+              className={`hidden text-slate-400 transition-transform lg:block ${showProfile
                   ? "rotate-180"
                   : ""
-              }`}
+                }`}
             />
 
           </button>
