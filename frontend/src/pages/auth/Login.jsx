@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   Mail,
   Lock,
@@ -11,9 +12,20 @@ import {
 } from "lucide-react";
 
 import { loginAdmin } from "../../services/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+
+  // ==========================================
+  // AUTH CONTEXT
+  // ==========================================
+
+  const { login } = useAuth();
+
+  // ==========================================
+  // FORM STATES
+  // ==========================================
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,12 +35,17 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ==========================================
+  // LOGIN
+  // ==========================================
+
   const handleLogin = async (e) => {
     e.preventDefault();
 
     setError("");
 
-    if (!email || !password) {
+    // Validation
+    if (!email.trim() || !password.trim()) {
       setError("Please enter email and password.");
       return;
     }
@@ -36,34 +53,40 @@ function Login() {
     try {
       setLoading(true);
 
+      // ======================================
+      // CALL LOGIN API
+      // ======================================
+
       const data = await loginAdmin(
-        email,
+        email.trim(),
         password
       );
 
-      // Store JWT token
-      localStorage.setItem(
-        "token",
-        data.access_token
-      );
+      // ======================================
+      // SAVE TOKEN + LOAD ADMIN
+      // ======================================
 
-      // Store basic admin information
-      localStorage.setItem(
-        "admin",
-        JSON.stringify({
-          email,
-        })
-      );
+      await login(data.access_token);
 
-      // Redirect to dashboard
-      navigate("/");
+      // ======================================
+      // REDIRECT TO DASHBOARD
+      // ======================================
+
+      navigate("/", {
+        replace: true,
+      });
+
     } catch (error) {
-      console.error("Login error:", error);
+      console.error(
+        "Login error:",
+        error
+      );
 
       setError(
         error.response?.data?.detail ||
           "Invalid email or password."
       );
+
     } finally {
       setLoading(false);
     }
@@ -80,13 +103,20 @@ function Login() {
 
         <div className="hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
 
+          {/* Logo */}
+
           <div>
+
             <div className="flex items-center gap-3">
+
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+
                 <Sparkles size={23} />
+
               </div>
 
               <div>
+
                 <h1 className="text-lg font-bold">
                   AI Resume Intelligence
                 </h1>
@@ -94,9 +124,14 @@ function Login() {
                 <p className="text-xs text-indigo-200">
                   Intelligent Recruitment Platform
                 </p>
+
               </div>
+
             </div>
+
           </div>
+
+          {/* Hero Content */}
 
           <div className="max-w-lg">
 
@@ -115,6 +150,8 @@ function Login() {
             </p>
 
           </div>
+
+          {/* Footer */}
 
           <p className="text-xs text-indigo-200">
             © 2026 AI Resume Intelligence System
@@ -135,10 +172,13 @@ function Login() {
             <div className="mb-10 flex items-center gap-3 lg:hidden">
 
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+
                 <Sparkles size={23} />
+
               </div>
 
               <div>
+
                 <h1 className="text-base font-bold text-slate-800">
                   AI Resume Intelligence
                 </h1>
@@ -146,6 +186,7 @@ function Login() {
                 <p className="text-xs text-slate-400">
                   Intelligent Recruitment Platform
                 </p>
+
               </div>
 
             </div>
@@ -167,6 +208,7 @@ function Login() {
             {/* Error */}
 
             {error && (
+
               <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
 
                 <AlertCircle
@@ -177,6 +219,7 @@ function Login() {
                 <span>{error}</span>
 
               </div>
+
             )}
 
             {/* Login Form */}
@@ -208,7 +251,9 @@ function Login() {
                     onChange={(e) =>
                       setEmail(e.target.value)
                     }
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
+                    disabled={loading}
+                    autoComplete="email"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                 </div>
@@ -219,13 +264,9 @@ function Login() {
 
               <div>
 
-                <div className="mb-2 flex items-center justify-between">
-
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Password
-                  </label>
-
-                </div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Password
+                </label>
 
                 <div className="relative">
 
@@ -245,7 +286,9 @@ function Login() {
                     onChange={(e) =>
                       setPassword(e.target.value)
                     }
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
+                    disabled={loading}
+                    autoComplete="current-password"
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                   <button
@@ -255,13 +298,16 @@ function Login() {
                         (previous) => !previous
                       )
                     }
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                    disabled={loading}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed"
                   >
+
                     {showPassword ? (
                       <EyeOff size={18} />
                     ) : (
                       <Eye size={18} />
                     )}
+
                   </button>
 
                 </div>
@@ -277,15 +323,21 @@ function Login() {
               >
 
                 {loading ? (
+
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+
                     Signing in...
                   </>
+
                 ) : (
+
                   <>
                     <LogIn size={18} />
+
                     Sign In
                   </>
+
                 )}
 
               </button>
@@ -297,10 +349,13 @@ function Login() {
             <div className="mt-8 border-t border-slate-100 pt-6 text-center">
 
               <p className="text-xs leading-5 text-slate-400">
+
                 Secure admin access powered by
+
                 <span className="ml-1 font-semibold text-slate-500">
                   JWT Authentication
                 </span>
+
               </p>
 
             </div>
