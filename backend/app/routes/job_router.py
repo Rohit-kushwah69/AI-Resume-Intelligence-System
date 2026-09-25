@@ -10,9 +10,16 @@ from sqlalchemy.orm import Session
 
 from ..database.database import get_db
 from ..database.models import Job, Resume, JobMatch
+
 from ..schemas.job_schema import JobCreate
+
 from ..services.final_matcher import calculate_final_match
-from ..services.ai_analyzer import analyze_job_match_with_ai
+
+from ..services.ai_analyzer import (
+    analyze_job_match_with_ai
+)
+
+from ..utils.security import get_current_admin
 
 
 # ==========================================
@@ -32,10 +39,18 @@ router = APIRouter(
 @router.post("/")
 def create_job(
     job_data: JobCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
+    admin_id = int(current_admin["sub"])
+
     job = Job(
+        # --------------------------------------
+        # ADMIN OWNERSHIP
+        # --------------------------------------
+        admin_id=admin_id,
+
         title=job_data.title,
         company=job_data.company,
         description=job_data.description,
@@ -58,6 +73,7 @@ def create_job(
 
         "job": {
             "id": job.id,
+            "admin_id": job.admin_id,
             "title": job.title,
             "company": job.company,
             "description": job.description,
@@ -79,16 +95,22 @@ def create_job(
 
 @router.get("/")
 def get_jobs(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
-    jobs = db.query(Job).all()
+    admin_id = int(current_admin["sub"])
+
+    jobs = db.query(Job).filter(
+        Job.admin_id == admin_id
+    ).all()
 
     result = []
 
     for job in jobs:
 
         try:
+
             required_skills = (
                 json.loads(
                     job.required_skills
@@ -96,7 +118,9 @@ def get_jobs(
                 if job.required_skills
                 else []
             )
+
         except json.JSONDecodeError:
+
             required_skills = [
                 skill.strip()
                 for skill in job.required_skills.split(",")
@@ -106,6 +130,8 @@ def get_jobs(
         result.append({
 
             "id": job.id,
+
+            "admin_id": job.admin_id,
 
             "title": job.title,
 
@@ -122,15 +148,30 @@ def get_jobs(
 
     return result
 
+
 # ==========================================
 # GET TOTAL MATCH COUNT
 # ==========================================
 
 @router.get("/match/count")
 def get_match_count(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
-    total_matches = db.query(JobMatch).count()
+
+    admin_id = int(current_admin["sub"])
+
+    total_matches = (
+        db.query(JobMatch)
+        .join(
+            Job,
+            Job.id == JobMatch.job_id
+        )
+        .filter(
+            Job.admin_id == admin_id
+        )
+        .count()
+    )
 
     return {
         "total_matches": total_matches
@@ -148,15 +189,19 @@ def get_match_count(
 )
 def get_match_history(
     resume_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
+    admin_id = int(current_admin["sub"])
+
     # --------------------------------------
-    # Check Resume
+    # Check Resume Ownership
     # --------------------------------------
 
     resume = db.query(Resume).filter(
-        Resume.id == resume_id
+        Resume.id == resume_id,
+        Resume.admin_id == admin_id
     ).first()
 
     if not resume:
@@ -166,15 +211,19 @@ def get_match_history(
             detail="Resume not found"
         )
 
-
     # --------------------------------------
     # Get History
     # --------------------------------------
 
     matches = (
         db.query(JobMatch)
+        .join(
+            Job,
+            Job.id == JobMatch.job_id
+        )
         .filter(
-            JobMatch.resume_id == resume_id
+            JobMatch.resume_id == resume_id,
+            Job.admin_id == admin_id
         )
         .order_by(
             JobMatch.created_at.desc()
@@ -182,9 +231,7 @@ def get_match_history(
         .all()
     )
 
-
     history = []
-
 
     for match in matches:
 
@@ -193,9 +240,9 @@ def get_match_history(
         # ----------------------------------
 
         job = db.query(Job).filter(
-            Job.id == match.job_id
+            Job.id == match.job_id,
+            Job.admin_id == admin_id
         ).first()
-
 
         # ----------------------------------
         # Matched Skills
@@ -215,7 +262,6 @@ def get_match_history(
 
             matched_skills = []
 
-
         # ----------------------------------
         # Missing Skills
         # ----------------------------------
@@ -234,7 +280,6 @@ def get_match_history(
 
             missing_skills = []
 
-
         # ----------------------------------
         # AI Analysis
         # ----------------------------------
@@ -252,7 +297,6 @@ def get_match_history(
         except json.JSONDecodeError:
 
             ai_analysis = {}
-
 
         # ----------------------------------
         # Add History
@@ -303,11 +347,6 @@ def get_match_history(
             "created_at": match.created_at
         })
 
-
-    # --------------------------------------
-    # Final Response
-    # --------------------------------------
-
     return {
 
         "resume_id": resume_id,
@@ -330,15 +369,19 @@ def get_match_history(
 def match_resume_with_job(
     job_id: int,
     resume_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
+
+    admin_id = int(current_admin["sub"])
 
     # --------------------------------------
     # Find Job
     # --------------------------------------
 
     job = db.query(Job).filter(
-        Job.id == job_id
+        Job.id == job_id,
+        Job.admin_id == admin_id
     ).first()
 
     if not job:
@@ -348,13 +391,13 @@ def match_resume_with_job(
             detail="Job not found"
         )
 
-
     # --------------------------------------
     # Find Resume
     # --------------------------------------
 
     resume = db.query(Resume).filter(
-        Resume.id == resume_id
+        Resume.id == resume_id,
+        Resume.admin_id == admin_id
     ).first()
 
     if not resume:
@@ -363,7 +406,6 @@ def match_resume_with_job(
             status_code=404,
             detail="Resume not found"
         )
-
 
     # --------------------------------------
     # Resume Skills
@@ -387,7 +429,6 @@ def match_resume_with_job(
             if skill.strip()
         ]
 
-
     # --------------------------------------
     # Required Skills
     # --------------------------------------
@@ -410,7 +451,6 @@ def match_resume_with_job(
             if skill.strip()
         ]
 
-
     # --------------------------------------
     # Calculate Final Match
     # --------------------------------------
@@ -429,7 +469,6 @@ def match_resume_with_job(
             job.experience_required or ""
         )
     )
-
 
     # --------------------------------------
     # AI Match Analysis
@@ -469,7 +508,6 @@ def match_resume_with_job(
             result["experience_score"]
         )
     )
-
 
     # --------------------------------------
     # Final Response
@@ -523,32 +561,19 @@ def match_resume_with_job(
 def save_job_match(
     job_id: int,
     resume_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
-    # --------------------------------------
-    # Check Duplicate Match
-    # --------------------------------------
-
-    existing_match = db.query(JobMatch).filter(
-        JobMatch.job_id == job_id,
-        JobMatch.resume_id == resume_id
-    ).first()
-
-    if existing_match:
-
-        raise HTTPException(
-            status_code=400,
-            detail="This job match is already saved in history"
-        )
-    
+    admin_id = int(current_admin["sub"])
 
     # --------------------------------------
     # Find Job
     # --------------------------------------
 
     job = db.query(Job).filter(
-        Job.id == job_id
+        Job.id == job_id,
+        Job.admin_id == admin_id
     ).first()
 
     if not job:
@@ -558,13 +583,13 @@ def save_job_match(
             detail="Job not found"
         )
 
-
     # --------------------------------------
     # Find Resume
     # --------------------------------------
 
     resume = db.query(Resume).filter(
-        Resume.id == resume_id
+        Resume.id == resume_id,
+        Resume.admin_id == admin_id
     ).first()
 
     if not resume:
@@ -574,6 +599,26 @@ def save_job_match(
             detail="Resume not found"
         )
 
+    # --------------------------------------
+    # Check Duplicate Match
+    # --------------------------------------
+
+    existing_match = db.query(
+        JobMatch
+    ).filter(
+        JobMatch.job_id == job_id,
+        JobMatch.resume_id == resume_id
+    ).first()
+
+    if existing_match:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This job match is already "
+                "saved in history"
+            )
+        )
 
     # --------------------------------------
     # Resume Skills
@@ -597,7 +642,6 @@ def save_job_match(
             if skill.strip()
         ]
 
-
     # --------------------------------------
     # Required Skills
     # --------------------------------------
@@ -620,7 +664,6 @@ def save_job_match(
             if skill.strip()
         ]
 
-
     # --------------------------------------
     # Calculate Match
     # --------------------------------------
@@ -639,7 +682,6 @@ def save_job_match(
             job.experience_required or ""
         )
     )
-
 
     # --------------------------------------
     # AI Analysis
@@ -680,7 +722,6 @@ def save_job_match(
         )
     )
 
-
     # --------------------------------------
     # Create JobMatch
     # --------------------------------------
@@ -720,7 +761,6 @@ def save_job_match(
         )
     )
 
-
     # --------------------------------------
     # Save Database
     # --------------------------------------
@@ -730,7 +770,6 @@ def save_job_match(
     db.commit()
 
     db.refresh(job_match)
-
 
     # --------------------------------------
     # Response
@@ -772,11 +811,15 @@ def save_job_match(
 @router.get("/{job_id}")
 def get_job(
     job_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
+    admin_id = int(current_admin["sub"])
+
     job = db.query(Job).filter(
-        Job.id == job_id
+        Job.id == job_id,
+        Job.admin_id == admin_id
     ).first()
 
     if not job:
@@ -785,7 +828,6 @@ def get_job(
             status_code=404,
             detail="Job not found"
         )
-
 
     try:
 
@@ -805,10 +847,11 @@ def get_job(
             if skill.strip()
         ]
 
-
     return {
 
         "id": job.id,
+
+        "admin_id": job.admin_id,
 
         "title": job.title,
 
@@ -823,6 +866,7 @@ def get_job(
         )
     }
 
+
 # ==========================================
 # DELETE JOB
 # ==========================================
@@ -830,33 +874,49 @@ def get_job(
 @router.delete("/{job_id}")
 def delete_job(
     job_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
+    admin_id = int(current_admin["sub"])
+
+    # --------------------------------------
     # Find Job
+    # --------------------------------------
+
     job = db.query(Job).filter(
-        Job.id == job_id
+        Job.id == job_id,
+        Job.admin_id == admin_id
     ).first()
 
     if not job:
+
         raise HTTPException(
             status_code=404,
             detail="Job not found"
         )
 
-    # Delete related match history
+    # --------------------------------------
+    # Delete Related Match History
+    # --------------------------------------
+
     db.query(JobMatch).filter(
         JobMatch.job_id == job_id
     ).delete(
         synchronize_session=False
     )
 
+    # --------------------------------------
     # Delete Job
+    # --------------------------------------
+
     db.delete(job)
 
     db.commit()
 
     return {
+
         "message": "Job deleted successfully",
+
         "job_id": job_id
     }

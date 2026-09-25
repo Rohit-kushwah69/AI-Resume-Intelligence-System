@@ -2,18 +2,29 @@ import os
 import shutil
 import json
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    UploadFile,
+    File,
+    Depends,
+    HTTPException
+)
+
 from sqlalchemy.orm import Session
 
 from ..database.database import get_db
 from ..database.models import Resume, JobMatch
+
 from ..services.pdf_parser import extract_text_from_pdf
 from ..services.resume_parser import parse_resume
+
 from ..services.ai_analyzer import (
     analyze_resume_with_ai,
     analyze_resume_intelligence
 )
- 
+
+from ..utils.security import get_current_admin
+
 
 router = APIRouter(
     prefix="/api/resumes",
@@ -25,34 +36,49 @@ UPLOAD_DIR = "app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-# --------------------------------------------------
-# Upload Resume
-# --------------------------------------------------
+# ==================================================
+# UPLOAD RESUME
+# ==================================================
 
 @router.post("/upload")
 async def upload_resume(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
-    # 1. Check PDF
+    # ==================================================
+    # 1. CHECK PDF
+    # ==================================================
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
             detail="Only PDF files are allowed"
         )
 
-    # 2. Save PDF
+    # ==================================================
+    # 2. SAVE PDF
+    # ==================================================
+
     file_path = os.path.join(
         UPLOAD_DIR,
         file.filename
     )
 
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(
+            file.file,
+            buffer
+        )
 
-    # 3. Extract text
-    resume_text = extract_text_from_pdf(file_path)
+    # ==================================================
+    # 3. EXTRACT TEXT
+    # ==================================================
+
+    resume_text = extract_text_from_pdf(
+        file_path
+    )
 
     if not resume_text:
         raise HTTPException(
@@ -60,10 +86,18 @@ async def upload_resume(
             detail="Could not extract text from PDF"
         )
 
-    # 4. Basic parser
-    basic_data = parse_resume(resume_text)
+    # ==================================================
+    # 4. BASIC PARSER
+    # ==================================================
 
-    # 5. Gemini Resume Parser
+    basic_data = parse_resume(
+        resume_text
+    )
+
+    # ==================================================
+    # 5. GEMINI RESUME PARSER
+    # ==================================================
+
     try:
 
         ai_data = analyze_resume_with_ai(
@@ -77,7 +111,10 @@ async def upload_resume(
             detail=f"AI analysis failed: {str(e)}"
         )
 
-    # 6. Gemini Resume Intelligence
+    # ==================================================
+    # 6. GEMINI RESUME INTELLIGENCE
+    # ==================================================
+
     try:
 
         ai_analysis = analyze_resume_intelligence(
@@ -88,15 +125,27 @@ async def upload_resume(
 
         raise HTTPException(
             status_code=500,
-            detail=f"AI intelligence analysis failed: {str(e)}"
+            detail=(
+                "AI intelligence analysis failed: "
+                f"{str(e)}"
+            )
         )
 
-    # 7. Save everything into SQLite
+    # ==================================================
+    # 7. SAVE EVERYTHING INTO SQLITE
+    # ==================================================
+
     resume = Resume(
 
-        # -----------------------------
-        # Personal Information
-        # -----------------------------
+        # ==================================================
+        # ADMIN OWNERSHIP
+        # ==================================================
+
+        admin_id=int(current_admin["sub"]),
+
+        # ==================================================
+        # PERSONAL INFORMATION
+        # ==================================================
 
         name=(
             ai_data.get("name")
@@ -113,9 +162,9 @@ async def upload_resume(
             or basic_data.get("phone")
         ),
 
-        # -----------------------------
-        # Resume Information
-        # -----------------------------
+        # ==================================================
+        # RESUME INFORMATION
+        # ==================================================
 
         education=json.dumps(
             ai_data.get("education")
@@ -146,9 +195,9 @@ async def upload_resume(
             or []
         ),
 
-        # -----------------------------
-        # AI Resume Intelligence
-        # -----------------------------
+        # ==================================================
+        # AI RESUME INTELLIGENCE
+        # ==================================================
 
         resume_score=ai_analysis.get(
             "resume_score"
@@ -186,9 +235,9 @@ async def upload_resume(
             )
         ),
 
-        # -----------------------------
-        # Original Resume
-        # -----------------------------
+        # ==================================================
+        # ORIGINAL RESUME
+        # ==================================================
 
         resume_text=resume_text,
 
@@ -197,19 +246,29 @@ async def upload_resume(
         file_path=file_path
     )
 
-    # 8. Save to database
+    # ==================================================
+    # 8. SAVE TO DATABASE
+    # ==================================================
+
     db.add(resume)
 
     db.commit()
 
     db.refresh(resume)
 
-    # 9. Response
+    # ==================================================
+    # 9. RESPONSE
+    # ==================================================
+
     return {
 
-        "message": "Resume uploaded and analyzed successfully",
+        "message": (
+            "Resume uploaded and analyzed successfully"
+        ),
 
         "resume_id": resume.id,
+
+        "admin_id": resume.admin_id,
 
         "parsed_data": ai_data,
 
@@ -217,16 +276,21 @@ async def upload_resume(
     }
 
 
-# --------------------------------------------------
-# Get All Resumes
-# --------------------------------------------------
+# ==================================================
+# GET ALL RESUMES
+# ==================================================
 
 @router.get("/")
 def get_resumes(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
-    resumes = db.query(Resume).all()
+    admin_id = int(current_admin["sub"])
+
+    resumes = db.query(Resume).filter(
+        Resume.admin_id == admin_id
+    ).all()
 
     result = []
 
@@ -236,13 +300,18 @@ def get_resumes(
 
             "id": resume.id,
 
+            "admin_id": resume.admin_id,
+
             "name": resume.name,
 
             "email": resume.email,
 
             "phone": resume.phone,
 
-            # Resume Data
+            # ==================================================
+            # RESUME DATA
+            # ==================================================
+
             "education": (
                 json.loads(resume.education)
                 if resume.education
@@ -273,7 +342,10 @@ def get_resumes(
                 else []
             ),
 
-            # AI Intelligence
+            # ==================================================
+            # AI INTELLIGENCE
+            # ==================================================
+
             "ai_analysis": {
 
                 "resume_score": resume.resume_score,
@@ -293,19 +365,26 @@ def get_resumes(
                 ),
 
                 "missing_skills": (
-                    json.loads(resume.ai_missing_skills)
+                    json.loads(
+                        resume.ai_missing_skills
+                    )
                     if resume.ai_missing_skills
                     else []
                 ),
 
                 "suggestions": (
-                    json.loads(resume.ai_suggestions)
+                    json.loads(
+                        resume.ai_suggestions
+                    )
                     if resume.ai_suggestions
                     else []
                 )
             },
 
-            # File
+            # ==================================================
+            # FILE
+            # ==================================================
+
             "file_name": resume.file_name,
 
             "file_path": resume.file_path,
@@ -316,18 +395,22 @@ def get_resumes(
     return result
 
 
-# --------------------------------------------------
-# Get Single Resume
-# --------------------------------------------------
+# ==================================================
+# GET SINGLE RESUME
+# ==================================================
 
 @router.get("/{resume_id}")
 def get_resume(
     resume_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
+    admin_id = int(current_admin["sub"])
+
     resume = db.query(Resume).filter(
-        Resume.id == resume_id
+        Resume.id == resume_id,
+        Resume.admin_id == admin_id
     ).first()
 
     if not resume:
@@ -341,13 +424,18 @@ def get_resume(
 
         "id": resume.id,
 
+        "admin_id": resume.admin_id,
+
         "name": resume.name,
 
         "email": resume.email,
 
         "phone": resume.phone,
 
-        # Resume Data
+        # ==================================================
+        # RESUME DATA
+        # ==================================================
+
         "education": (
             json.loads(resume.education)
             if resume.education
@@ -378,7 +466,10 @@ def get_resume(
             else []
         ),
 
-        # AI Intelligence
+        # ==================================================
+        # AI INTELLIGENCE
+        # ==================================================
+
         "ai_analysis": {
 
             "resume_score": resume.resume_score,
@@ -398,19 +489,26 @@ def get_resume(
             ),
 
             "missing_skills": (
-                json.loads(resume.ai_missing_skills)
+                json.loads(
+                    resume.ai_missing_skills
+                )
                 if resume.ai_missing_skills
                 else []
             ),
 
             "suggestions": (
-                json.loads(resume.ai_suggestions)
+                json.loads(
+                    resume.ai_suggestions
+                )
                 if resume.ai_suggestions
                 else []
             )
         },
 
-        # Original Resume
+        # ==================================================
+        # ORIGINAL RESUME
+        # ==================================================
+
         "resume_text": resume.resume_text,
 
         "file_name": resume.file_name,
@@ -420,40 +518,57 @@ def get_resume(
         "created_at": resume.created_at
     }
 
-# ==========================================
+
+# ==================================================
 # DELETE RESUME
-# ==========================================
+# ==================================================
 
 @router.delete("/{resume_id}")
 def delete_resume(
     resume_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
 ):
 
-    # Find Resume
+    admin_id = int(current_admin["sub"])
+
+    # ==================================================
+    # FIND RESUME
+    # ==================================================
+
     resume = db.query(Resume).filter(
-        Resume.id == resume_id
+        Resume.id == resume_id,
+        Resume.admin_id == admin_id
     ).first()
 
     if not resume:
+
         raise HTTPException(
             status_code=404,
             detail="Resume not found"
         )
 
-    # Delete related job matches
+    # ==================================================
+    # DELETE RELATED JOB MATCHES
+    # ==================================================
+
     db.query(JobMatch).filter(
         JobMatch.resume_id == resume_id
     ).delete(
         synchronize_session=False
     )
 
-    # Delete Resume
+    # ==================================================
+    # DELETE RESUME
+    # ==================================================
+
     db.delete(resume)
 
     db.commit()
 
     return {
+
         "message": "Resume deleted successfully",
+
         "resume_id": resume_id
     }
