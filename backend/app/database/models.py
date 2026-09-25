@@ -112,3 +112,57 @@ class Admin(Base):
         DateTime,
         default=datetime.utcnow
     )
+
+class Chat(Base):
+    __tablename__ = "chats"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    admin_id = Column(
+        Integer,
+        nullable=False,
+        index=True
+    )
+
+    resume_id = Column(
+        Integer,
+        nullable=False,
+        index=True
+    )
+
+    title = Column(
+        String(255),
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    chat_id = Column(
+        Integer,
+        nullable=False,
+        index=True
+    )
+
+    role = Column(
+        String(20),
+        nullable=False
+    )
+
+    content = Column(
+        Text,
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )

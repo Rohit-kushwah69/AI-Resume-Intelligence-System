@@ -7,6 +7,7 @@ from .database import models
 from .routes.resume_routes import router as resume_router
 from .routes.job_router import router as job_router
 from .routes.auth_routes import router as auth_router
+from .routes.chat_routes import router as chat_router
 
 
 # Create database tables
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(resume_router)
 app.include_router(job_router)
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 @app.get("/")

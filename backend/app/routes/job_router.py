@@ -804,6 +804,93 @@ def save_job_match(
 
 
 # ==========================================
+# UPDATE JOB
+# ==========================================
+
+@router.put("/{job_id}")
+def update_job(
+    job_id: int,
+    job_data: JobCreate,
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
+):
+    admin_id = int(current_admin["sub"])
+
+    # --------------------------------------
+    # Find Job + Check Ownership
+    # --------------------------------------
+
+    job = db.query(Job).filter(
+        Job.id == job_id,
+        Job.admin_id == admin_id
+    ).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    # --------------------------------------
+    # Update Job Fields
+    # --------------------------------------
+
+    job.title = job_data.title
+    job.company = job_data.company
+    job.description = job_data.description
+
+    job.required_skills = json.dumps(
+        job_data.required_skills
+    )
+
+    job.experience_required = (
+        job_data.experience_required
+    )
+
+    # --------------------------------------
+    # IMPORTANT:
+    # Existing matches were calculated using
+    # the old job requirements.
+    #
+    # Delete them so the next matching operation
+    # calculates fresh results for the updated job.
+    # --------------------------------------
+
+    db.query(JobMatch).filter(
+        JobMatch.job_id == job_id
+    ).delete(
+        synchronize_session=False
+    )
+
+    # --------------------------------------
+    # Save Changes
+    # --------------------------------------
+
+    db.commit()
+    db.refresh(job)
+
+    # --------------------------------------
+    # Response
+    # --------------------------------------
+
+    return {
+        "message": "Job updated successfully",
+
+        "job": {
+            "id": job.id,
+            "admin_id": job.admin_id,
+            "title": job.title,
+            "company": job.company,
+            "description": job.description,
+            "required_skills": job_data.required_skills,
+            "experience_required": (
+                job_data.experience_required
+            )
+        }
+    }
+
+
+# ==========================================
 # GET SINGLE JOB
 # IMPORTANT: KEEP THIS LAST
 # ==========================================
